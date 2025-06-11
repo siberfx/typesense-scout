@@ -1,8 +1,8 @@
 <?php
 
-namespace Typesense\LaravelTypesense\Concerns;
+namespace Siberfx\Typesense\Concerns;
 
-use Typesense\LaravelTypesense\Typesense;
+use Siberfx\Typesense\Typesense;
 
 trait HasScopedApiKey
 {

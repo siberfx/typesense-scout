@@ -1,13 +1,13 @@
 <?php
 
-namespace Typesense\LaravelTypesense\Classes;
+namespace Siberfx\Typesense\Classes;
 
 /**
  * Class TypesenseDocumentIndexResponse.
  *
  * @date   02/10/2021
  *
- * @author Abdullah Al-Faqeir <abdullah@devloops.net>
+ * @author Selim Görmüş <info@siberfx.com>
  */
 class TypesenseDocumentIndexResponse
 {

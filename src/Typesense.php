@@ -1,26 +1,26 @@
 <?php
 
-namespace Typesense\LaravelTypesense;
+namespace Siberfx\Typesense;
 
 use Illuminate\Support\Facades\Config;
 use Laravel\Scout\EngineManager;
 use Typesense\Exceptions\TypesenseClientError;
-use Typesense\LaravelTypesense\Classes\TypesenseDocumentIndexResponse;
+use Siberfx\Typesense\Classes\TypesenseDocumentIndexResponse;
 use Typesense\Client;
 use Typesense\Collection;
 use Typesense\Document;
 use Laravel\Scout\Builder;
-use Typesense\LaravelTypesense\Mixin\BuilderMixin;
+use Siberfx\Typesense\Mixin\BuilderMixin;
 use Typesense\Exceptions\ObjectNotFound;
-use Typesense\LaravelTypesense\Engines\TypesenseEngine;
+use Siberfx\Typesense\Engines\TypesenseEngine;
 
 /**
  * Class Typesense
  *
- * @package Typesense\LaravelTypesense
+ * @package Siberfx\Typesense
  * @date    4/5/20
  *
- * @author  Abdullah Al-Faqeir <abdullah@devloops.net>
+ * @author  Selim Görmüş <info@siberfx.com>
  */
 class Typesense
 {
@@ -111,7 +111,7 @@ class Typesense
      * @throws \Typesense\Exceptions\TypesenseClientError
      * @throws \Http\Client\Exception
      *
-     * @return \Typesense\LaravelTypesense\Classes\TypesenseDocumentIndexResponse
+     * @return \Siberfx\Typesense\Classes\TypesenseDocumentIndexResponse
      */
     public function upsertDocument(Collection $collectionIndex, $array): TypesenseDocumentIndexResponse
     {

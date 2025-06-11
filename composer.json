@@ -1,5 +1,5 @@
 {
-    "name": "typesense/laravel-scout-typesense-driver",
+    "name": "siberfx/typesense-scout",
     "description": "Laravel Scout Driver for Typesense",
     "keywords": [
         "laravel",
@@ -11,48 +11,47 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Abdullah Al-Faqeir",
-            "email": "abdullah@devloops.net",
-            "homepage": "https://www.devloops.net",
+            "name": "Selim Görmüş",
+            "email": "info@siberfx.com",
+            "homepage": "https://siberfx.com",
             "role": "Developer"
         },
         {
-            "name": "hi019",
-            "homepage": "https://github.com/hi019",
-            "role": "Developer"
+            "name": "siberfx",
+            "homepage": "https://github.com/siberfx",
+            "role": "Software Engineer"
         }
     ],
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
-            "Typesense\\LaravelTypesense\\": "src/",
-            "Typesense\\LaravelTypesense\\Tests\\": "tests/"
+            "Siberfx\\Typesense\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Typesense\\LaravelTypesense\\TypesenseServiceProvider"
+                "Siberfx\\Typesense\\TypesenseServiceProvider"
             ],
             "aliases": {
-                "Typesense": "Typesense\\LaravelTypesense\\TypesenseFacade"
+                "Typesense": "Siberfx\\Typesense\\TypesenseFacade"
             }
         }
     },
     "require": {
-        "php": "^8.0",
-        "laravel/scout": "^8.0|^9.0|^10.0",
-        "illuminate/bus": "^7.0|^8.0|^9.0|^10.0|^11.0",
-        "illuminate/contracts": "^7.0|^8.0|^9.0|^10.0|^11.0",
-        "illuminate/database": "^7.0|^8.0|^9.0|^10.0|^11.0",
-        "illuminate/pagination": "^7.0|^8.0|^9.0|^10.0|^11.0",
-        "illuminate/queue": "^7.0|^8.0|^9.0|^10.0|^11.0",
-        "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0",
-        "typesense/typesense-php": "^4.2"
+        "php": "^8.2",
+        "laravel/scout": "^11.0|^12.0",
+        "illuminate/bus": "^11.0|^12.0",
+        "illuminate/contracts": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.0",
+        "illuminate/pagination": "^11.0|^12.0",
+        "illuminate/queue": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "typesense/typesense-php": "^5.0"
     },
     "config": {
         "platform": {
-            "php": "8.0"
+            "php": "8.3"
         },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
@@ -61,11 +60,5 @@
     },
     "suggest": {
         "typesense/typesense-php": "Required to use the Typesense php client."
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^8.0|^9.0|^10.5",
-        "mockery/mockery": "^1.3",
-        "orchestra/testbench": "^6.17|^7.0|^8.0|^9.0",
-        "symfony/http-client": "^5.4|^7.0"
     }
 }

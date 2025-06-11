@@ -1,9 +1,9 @@
 <?php
 
-namespace Typesense\LaravelTypesense;
+namespace Siberfx\Typesense;
 
-use Typesense\LaravelTypesense\Engines\TypesenseEngine;
-use Typesense\LaravelTypesense\Mixin\BuilderMixin;
+use Siberfx\Typesense\Engines\TypesenseEngine;
+use Siberfx\Typesense\Mixin\BuilderMixin;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Scout\Builder;
@@ -15,7 +15,7 @@ use Typesense\Client;
  *
  * @date    4/5/20
  *
- * @author  Abdullah Al-Faqeir <abdullah@devloops.net>
+ * @author  Selim Görmüş <info@siberfx.com>
  */
 class TypesenseServiceProvider extends ServiceProvider
 {

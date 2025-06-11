@@ -1,6 +1,6 @@
 <?php
 
-namespace Typesense\LaravelTypesense;
+namespace Siberfx\Typesense;
 
 use Illuminate\Support\Facades\Facade;
 
@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Facade;
  *
  * @date    4/5/20
  *
- * @author  Abdullah Al-Faqeir <abdullah@devloops.net>
+ * @author  Selim Görmüş <info@siberfx.com>
  */
 class TypesenseFacade extends Facade
 {

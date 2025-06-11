@@ -1,11 +1,11 @@
 <?php
 
-namespace Typesense\LaravelTypesense\Interfaces;
+namespace Siberfx\Typesense\Interfaces;
 
 /**
  * Interface TypesenseSearch
  *
- * @package Typesense\LaravelTypesense\Interfaces
+ * @package Siberfx\Typesense\Interfaces
  */
 interface TypesenseDocument
 {

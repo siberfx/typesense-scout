@@ -1,6 +1,6 @@
 <?php
 
-namespace Typesense\LaravelTypesense\Mixin;
+namespace Siberfx\Typesense\Mixin;
 
 use Closure;
 
@@ -11,7 +11,7 @@ use Closure;
  *
  * @date 09/10/2021
  *
- * @author Abdullah Al-Faqeir <abdullah@devloops.net>
+ * @author Selim Görmüş <info@siberfx.com>
  */
 class BuilderMixin
 {

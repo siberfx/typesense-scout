@@ -1,8 +1,8 @@
 <?php
 
-namespace Typesense\LaravelTypesense\Engines;
+namespace Siberfx\Typesense\Engines;
 
-use Typesense\LaravelTypesense\Typesense;
+use Siberfx\Typesense\Typesense;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Config;
  *
  * @date    4/5/20
  *
- * @author  Abdullah Al-Faqeir <abdullah@devloops.net>
+ * @author  Selim Görmüş <info@siberfx.com>
  */
 class TypesenseEngine extends Engine
 {

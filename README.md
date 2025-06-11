@@ -13,7 +13,7 @@ This package makes it easy to add full text search support to your models with L
 
 <!--
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/typesense/laravel-scout-typesense-driver.svg?style=flat-square)](https://packagist.org/packages/typesense/laravel-scout-typesense-driver) [![PHP from Packagist](https://img.shields.io/packagist/php-v/typesense/laravel-scout-typesense-driver?style=flat-square)](https://packagist.org/packages/typesense/laravel-scout-typesense-driver)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout) [![PHP from Packagist](https://img.shields.io/packagist/php-v/siberfx/typesense-scout?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
 
 -->
 
@@ -39,7 +39,7 @@ composer require php-http/guzzle7-adapter
 Then install the driver:
 
 ```bash
-composer require typesense/laravel-scout-typesense-driver
+composer require siberfx/typesense-scout
 ```
 
 And add the service provider:
@@ -48,7 +48,7 @@ And add the service provider:
 // config/app.php
 'providers' => [
     // ...
-    Typesense\LaravelTypesense\TypesenseServiceProvider::class,
+    Siberfx\Typesense\TypesenseServiceProvider::class,
 ],
 ```
 
@@ -111,7 +111,7 @@ define the fields you want to make searchable by defining the `toSearchableArray
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
-use Typesense\LaravelTypesense\Interfaces\TypesenseDocument;
+use Siberfx\Typesense\Interfaces\TypesenseDocument;
 use Laravel\Scout\Searchable;
 
 class Todo extends Model implements TypesenseDocument
@@ -226,8 +226,8 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Searchable;
-use Typesense\LaravelTypesense\Concerns\HasScopedApiKey;
-use Typesense\LaravelTypesense\Interfaces\TypesenseDocument;
+use Siberfx\Typesense\Concerns\HasScopedApiKey;
+use Siberfx\Typesense\Interfaces\TypesenseDocument;
 
 class Todo extends Model implements TypesenseDocument
 {
@@ -241,14 +241,14 @@ Todo::setScopedApiKey('xyz')->search('todo')->get();
 ```
 
 ## Migrating from devloopsnet/laravel-typesense
-- Replace `devloopsnet/laravel-typesense` in your composer.json requirements with `typesense/laravel-scout-typesense-driver`
+- Replace `devloopsnet/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
 - The Scout driver is now called `typesense`, instead of `typesensesearch`. This should be reflected by setting the SCOUT_DRIVER env var to `typesense`,
   and changing the config/scout.php config key from `typesensesearch` to `typesense`
-- Instead of importing `Devloops\LaravelTypesense\*`, you should import `Typesense\LaravelTypesense\*`
-- Instead of models implementing `Devloops\LaravelTypesense\Interfaces\TypesenseSearch`, they should implement `Typesense\LaravelTypesense\Interfaces\TypesenseDocument`
+- Instead of importing `Devloops\LaravelTypesense\*`, you should import `Siberfx\Typesense\*`
+- Instead of models implementing `Devloops\LaravelTypesense\Interfaces\TypesenseSearch`, they should implement `Siberfx\Typesense\Interfaces\TypesenseDocument`
 
 ## Authors
-This package was originally authored by [Abdullah Al-Faqeir](https://github.com/AbdullahFaqeir) and his company DevLoops: https://github.com/devloopsnet/laravel-scout-typesense-engine. It has since been adopted into the Typesense Github org. 
+This package was originally authored by [Selim Görmüş](https://github.com/AbdullahFaqeir) and his company DevLoops: https://github.com/devloopsnet/laravel-scout-typesense-engine. It has since been adopted into the Typesense Github org. 
 
 Other key contributors include:
 
