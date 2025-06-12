@@ -56,7 +56,7 @@ class Typesense
      */
     public function setScopedApiKey($key): void
     {
-        $config = Config::get('scout.typesense');
+        $config = Config::get('scout.typesense.client-settings');
         $config['api_key'] = $key;
         $client = new Client($config);
 

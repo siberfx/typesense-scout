@@ -26,7 +26,7 @@ class TypesenseServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app[EngineManager::class]->extend('typesense', static function ($app) {
-            $client = new Client(Config::get('scout.typesense'));
+            $client = new Client(Config::get('scout.typesense.client-settings'));
 
             return new TypesenseEngine(new Typesense($client));
         });
@@ -40,7 +40,7 @@ class TypesenseServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(Typesense::class, static function () {
-            $client = new Client(Config::get('scout.typesense'));
+            $client = new Client(Config::get('scout.typesense.client-settings'));
 
             return new Typesense($client);
         });
