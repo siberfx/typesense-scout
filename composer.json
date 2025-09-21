@@ -15,11 +15,6 @@
             "email": "info@siberfx.com",
             "homepage": "https://siberfx.com",
             "role": "Developer"
-        },
-        {
-            "name": "siberfx",
-            "homepage": "https://github.com/siberfx",
-            "role": "Software Engineer"
         }
     ],
     "minimum-stability": "stable",

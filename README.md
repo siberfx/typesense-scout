@@ -1,6 +1,6 @@
 # Laravel Scout Typesense Driver 
 
-This package makes it easy to add full text search support to your models with Laravel 7.\* to 11.\*. 
+This package makes it easy to add full text search support to your models with Laravel 12+. 
 
 > [!IMPORTANT] 
 > The features from the Scout driver in this repo have been merged upstream into [Laravel Scout natively](https://laravel.com/docs/11.x/scout#typesense).
@@ -21,7 +21,7 @@ This package makes it easy to add full text search support to your models with L
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Migrating from devloopsnet/laravel-typesense](#migrating-from-devloopsnetlaravel-typesense)
+- [Migrating from siberfx/typesense-scout](#migrating-from-siberfx-typesense)
 - [Authors](#authors)
 - [License](#license)
 
@@ -99,7 +99,7 @@ In your `config/scout.php` add:
 
 ## Usage
 
-If you are unfamiliar with Laravel Scout, we suggest reading it's [documentation](https://laravel.com/docs/11.x/scout) first.
+If you are unfamiliar with Laravel Scout, we suggest reading it's [documentation](https://laravel.com/docs/12.x/scout) first.
 
 After you have installed scout and the Typesense driver, you need to add the
 `Searchable` trait to your models that you want to make searchable. Additionaly,
@@ -240,20 +240,18 @@ class Todo extends Model implements TypesenseDocument
 Todo::setScopedApiKey('xyz')->search('todo')->get();
 ```
 
-## Migrating from devloopsnet/laravel-typesense
-- Replace `devloopsnet/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
+## Migrating from siberfx/laravel-typesense
+- Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
 - The Scout driver is now called `typesense`, instead of `typesensesearch`. This should be reflected by setting the SCOUT_DRIVER env var to `typesense`,
   and changing the config/scout.php config key from `typesensesearch` to `typesense`
-- Instead of importing `Devloops\LaravelTypesense\*`, you should import `Siberfx\Typesense\*`
-- Instead of models implementing `Devloops\LaravelTypesense\Interfaces\TypesenseSearch`, they should implement `Siberfx\Typesense\Interfaces\TypesenseDocument`
+- Instead of importing `Siberfx\Typesense\*`, you should import `Siberfx\Typesense\*`
+- Instead of models implementing `Siberfx\Typesense\Interfaces\TypesenseSearch`, they should implement `Siberfx\Typesense\Interfaces\TypesenseDocument`
 
 ## Authors
-This package was originally authored by [Selim Görmüş](https://github.com/AbdullahFaqeir) and his company DevLoops: https://github.com/devloopsnet/laravel-scout-typesense-engine. It has since been adopted into the Typesense Github org. 
+Anonymous
 
 Other key contributors include:
 
-- [hi019](https://github.com/hi019)
-- [Philip Manavopoulos](https://github.com/manavo)
 
 ## License
 

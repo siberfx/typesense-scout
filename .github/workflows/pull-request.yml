@@ -2,7 +2,7 @@ name: Run Package Tests
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   tests:
