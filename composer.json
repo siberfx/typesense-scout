@@ -34,7 +34,7 @@
         }
     },
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "laravel/scout": "^10.0|^11.0",
         "illuminate/bus": "^11.0|^12.0",
         "illuminate/contracts": "^11.0|^12.0",
@@ -42,11 +42,11 @@
         "illuminate/pagination": "^11.0|^12.0",
         "illuminate/queue": "^11.0|^12.0",
         "illuminate/support": "^11.0|^12.0",
-        "typesense/typesense-php": "^5.0"
+        "typesense/typesense-php": "^4.9|^5.0"
     },
     "config": {
         "platform": {
-            "php": "8.2"
+            "php": "8.3"
         },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
