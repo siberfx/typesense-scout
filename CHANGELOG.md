@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   builds a Typesense `vector_query`, and `vectorQuery($raw)` accepts a raw
   string for full control. Both are chainable on the Scout builder. Pure vector
   search uses `search('*')`; supplying a text query performs a hybrid search.
+- Admin API wrappers on `Typesense` (also available via the facade):
+  - Synonyms: `upsertSynonym`, `retrieveSynonyms`, `retrieveSynonym`, `deleteSynonym`.
+  - Curation / overrides: `upsertOverride`, `retrieveOverrides`, `retrieveOverride`, `deleteOverride`.
+  - Collection aliases: `upsertAlias`, `retrieveAliases`, `retrieveAlias`, `deleteAlias`.
+  - Analytics rules: `upsertAnalyticsRule`, `retrieveAnalyticsRules`, `retrieveAnalyticsRule`, `deleteAnalyticsRule`.
 - Test suite: PHPUnit harness with unit coverage for filter generation,
   filter-value normalisation, scoped key generation, and the published config
   shape.

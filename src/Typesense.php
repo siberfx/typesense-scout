@@ -262,4 +262,258 @@ class Typesense
     {
         return $this->client->getKeys()->create($schema);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Synonyms (per collection)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a synonym for a collection.
+     *
+     * @param string $collectionName
+     * @param string $synonymId
+     * @param array  $config e.g. ['synonyms' => ['blazer', 'coat', 'jacket']].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertSynonym(string $collectionName, string $synonymId, array $config): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getSynonyms()->upsert($synonymId, $config);
+    }
+
+    /**
+     * Retrieve all synonyms for a collection.
+     *
+     * @param string $collectionName
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveSynonyms(string $collectionName): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getSynonyms()->retrieve();
+    }
+
+    /**
+     * Retrieve a single synonym from a collection.
+     *
+     * @param string $collectionName
+     * @param string $synonymId
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveSynonym(string $collectionName, string $synonymId): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getSynonyms()[$synonymId]->retrieve();
+    }
+
+    /**
+     * Delete a synonym from a collection.
+     *
+     * @param string $collectionName
+     * @param string $synonymId
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteSynonym(string $collectionName, string $synonymId): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getSynonyms()[$synonymId]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Overrides / Curation (per collection)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a curation override for a collection.
+     *
+     * @param string $collectionName
+     * @param string $overrideId
+     * @param array  $config e.g. ['rule' => [...], 'includes' => [...], 'excludes' => [...]].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertOverride(string $collectionName, string $overrideId, array $config): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getOverrides()->upsert($overrideId, $config);
+    }
+
+    /**
+     * Retrieve all curation overrides for a collection.
+     *
+     * @param string $collectionName
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveOverrides(string $collectionName): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getOverrides()->retrieve();
+    }
+
+    /**
+     * Retrieve a single curation override from a collection.
+     *
+     * @param string $collectionName
+     * @param string $overrideId
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveOverride(string $collectionName, string $overrideId): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getOverrides()[$overrideId]->retrieve();
+    }
+
+    /**
+     * Delete a curation override from a collection.
+     *
+     * @param string $collectionName
+     * @param string $overrideId
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteOverride(string $collectionName, string $overrideId): array
+    {
+        return $this->client->getCollections()->{$collectionName}->getOverrides()[$overrideId]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Collection Aliases
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a collection alias.
+     *
+     * @param string $name
+     * @param array  $mapping e.g. ['collection_name' => 'products_v2'].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertAlias(string $name, array $mapping): array
+    {
+        return $this->client->getAliases()->upsert($name, $mapping);
+    }
+
+    /**
+     * Retrieve all collection aliases.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveAliases(): array
+    {
+        return $this->client->getAliases()->retrieve();
+    }
+
+    /**
+     * Retrieve a single collection alias.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveAlias(string $name): array
+    {
+        return $this->client->getAliases()[$name]->retrieve();
+    }
+
+    /**
+     * Delete a collection alias.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteAlias(string $name): array
+    {
+        return $this->client->getAliases()[$name]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Analytics Rules
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update an analytics rule.
+     *
+     * @param string $ruleName
+     * @param array  $params e.g. ['type' => 'popular_queries', 'params' => [...]].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertAnalyticsRule(string $ruleName, array $params): array
+    {
+        return $this->client->getAnalytics()->rules()->upsert($ruleName, $params);
+    }
+
+    /**
+     * Retrieve all analytics rules.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveAnalyticsRules(): array
+    {
+        return $this->client->getAnalytics()->rules()->retrieve();
+    }
+
+    /**
+     * Retrieve a single analytics rule.
+     *
+     * @param string $ruleName
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveAnalyticsRule(string $ruleName): array
+    {
+        return $this->client->getAnalytics()->rules()[$ruleName]->retrieve();
+    }
+
+    /**
+     * Delete an analytics rule.
+     *
+     * @param string $ruleName
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteAnalyticsRule(string $ruleName): array
+    {
+        return $this->client->getAnalytics()->rules()[$ruleName]->delete();
+    }
 }

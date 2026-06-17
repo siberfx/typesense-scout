@@ -310,6 +310,49 @@ Todo::search('*')
     ->get();
 ```
 
+### Synonyms, Curation, Aliases & Analytics
+
+Collection-level admin operations are available on the `Typesense` instance
+(resolve it from the container or via the `Typesense` facade).
+
+```php
+use Siberfx\Typesense\Typesense;
+
+$typesense = app(Typesense::class);
+
+// Synonyms (per collection)
+$typesense->upsertSynonym('todos', 'coat-synonyms', [
+    'synonyms' => ['blazer', 'coat', 'jacket'],
+]);
+$typesense->retrieveSynonyms('todos');
+$typesense->retrieveSynonym('todos', 'coat-synonyms');
+$typesense->deleteSynonym('todos', 'coat-synonyms');
+
+// Curation / overrides (per collection)
+$typesense->upsertOverride('todos', 'promote-tidy', [
+    'rule'     => ['query' => 'tidy', 'match' => 'exact'],
+    'includes' => [['id' => '123', 'position' => 1]],
+]);
+$typesense->retrieveOverrides('todos');
+$typesense->retrieveOverride('todos', 'promote-tidy');
+$typesense->deleteOverride('todos', 'promote-tidy');
+
+// Collection aliases
+$typesense->upsertAlias('todos', ['collection_name' => 'todos_v2']);
+$typesense->retrieveAliases();
+$typesense->retrieveAlias('todos');
+$typesense->deleteAlias('todos');
+
+// Analytics rules
+$typesense->upsertAnalyticsRule('popular-todos', [
+    'type'   => 'popular_queries',
+    'params' => [/* ... */],
+]);
+$typesense->retrieveAnalyticsRules();
+$typesense->retrieveAnalyticsRule('popular-todos');
+$typesense->deleteAnalyticsRule('popular-todos');
+```
+
 ## Migrating from siberfx/laravel-typesense
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
 - The Scout driver is now called `typesense`, instead of `typesensesearch`. This should be reflected by setting the SCOUT_DRIVER env var to `typesense`,
