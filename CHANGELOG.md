@@ -10,8 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Laravel 13 support.
 - `whereNotIn()` support in the search engine — Scout's `whereNotIn` now
   produces a Typesense `field:!=[...]` filter (previously silently ignored).
-- Test suite: PHPUnit harness with unit coverage for filter generation and the
-  published config shape.
+- Comparison / range filter operators via array values, e.g.
+  `where('price', ['>', 100])` => `price:>100` and
+  `where('price', ['[10..100]'])` => `price:[10..100]`.
+- Boolean filter values now render as Typesense literals (`true`/`false`)
+  instead of `1`/`0`, via a new `parseFilterValue()` applied to all where
+  clauses.
+- Real Typesense scoped search keys: `Typesense::generateScopedSearchKey()`
+  (and the `HasScopedApiKey::generateScopedSearchKey()` helper) produce an
+  HMAC-signed key embedding search parameters such as a tenant `filter_by` or
+  `expires_at`. Added `Typesense::createApiKey()` for API key creation.
+- Test suite: PHPUnit harness with unit coverage for filter generation,
+  filter-value normalisation, scoped key generation, and the published config
+  shape.
 
 ### Fixed
 - Config mismatch: the published `config/scout.php` now nests Typesense

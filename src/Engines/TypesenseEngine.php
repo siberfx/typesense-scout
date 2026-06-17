@@ -393,26 +393,17 @@ class TypesenseEngine extends Engine
     protected function filters(Builder $builder): string
     {
         $whereFilter = collect($builder->wheres)
-            ->map([
-                $this,
-                'parseWhereFilter',
-            ])
+            ->map(fn ($value, $key) => $this->parseWhereFilter($this->parseFilterValue($value), $key))
             ->values()
             ->implode(' && ');
 
         $whereInFilter = collect($builder->whereIns)
-            ->map([
-                $this,
-                'parseWhereInFilter',
-            ])
+            ->map(fn ($value, $key) => $this->parseWhereInFilter($this->parseFilterValue($value), $key))
             ->values()
             ->implode(' && ');
 
         $whereNotInFilter = collect($builder->whereNotIns)
-            ->map([
-                $this,
-                'parseWhereNotInFilter',
-            ])
+            ->map(fn ($value, $key) => $this->parseWhereNotInFilter($this->parseFilterValue($value), $key))
             ->values()
             ->implode(' && ');
 
@@ -422,7 +413,34 @@ class TypesenseEngine extends Engine
     }
 
     /**
+     * Normalise a filter value before it is rendered into a Typesense filter
+     * string. Booleans become Typesense's literal `true`/`false`, and arrays
+     * are normalised recursively (so operator arrays such as ['>', 100] and
+     * whereIn/whereNotIn value lists are handled consistently).
+     *
+     * @param array|string|bool|int|float $value
+     *
+     * @return array|string|bool|int|float
+     */
+    public function parseFilterValue(array|string|bool|int|float $value): array|string|bool|int|float
+    {
+        if (is_array($value)) {
+            return array_map([$this, 'parseFilterValue'], $value);
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        return $value;
+    }
+
+    /**
      * Parse typesense where filter.
+     *
+     * Passing an array enables comparison/range operators, e.g.
+     * where('price', ['>', 100]) => "price:>100" and
+     * where('price', ['[10..100]']) => "price:[10..100]".
      *
      * @param array|string $value
      * @param string $key

@@ -227,4 +227,39 @@ class Typesense
     {
         return $this->client->multiSearch->perform($searchRequests, $commonSearchParams);
     }
+
+    /**
+     * Generate a Typesense scoped search API key.
+     *
+     * The returned key embeds the given search parameters (e.g. a `filter_by`
+     * for multi-tenant isolation, or an `expires_at`) and is computed locally
+     * via HMAC — no API call is made. Use the result as the `api_key` for
+     * search-only clients.
+     *
+     * @param string $searchKey  A parent search-only API key.
+     * @param array  $parameters Embedded search parameters, e.g.
+     *                           ['filter_by' => 'company_id:42', 'expires_at' => ...].
+     *
+     * @return string
+     * @throws \JsonException
+     */
+    public function generateScopedSearchKey(string $searchKey, array $parameters): string
+    {
+        return $this->client->getKeys()->generateScopedSearchKey($searchKey, $parameters);
+    }
+
+    /**
+     * Create a new Typesense API key.
+     *
+     * @param array $schema The key schema, e.g.
+     *                      ['description' => '...', 'actions' => ['documents:search'], 'collections' => ['*']].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function createApiKey(array $schema): array
+    {
+        return $this->client->getKeys()->create($schema);
+    }
 }
