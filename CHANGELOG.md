@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   (and the `HasScopedApiKey::generateScopedSearchKey()` helper) produce an
   HMAC-signed key embedding search parameters such as a tenant `filter_by` or
   `expires_at`. Added `Typesense::createApiKey()` for API key creation.
+- Vector / hybrid semantic search: `nearestNeighbors($field, $vector, $k, ...)`
+  builds a Typesense `vector_query`, and `vectorQuery($raw)` accepts a raw
+  string for full control. Both are chainable on the Scout builder. Pure vector
+  search uses `search('*')`; supplying a text query performs a hybrid search.
 - Test suite: PHPUnit harness with unit coverage for filter generation,
   filter-value normalisation, scoped key generation, and the published config
   shape.

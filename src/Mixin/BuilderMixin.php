@@ -404,4 +404,36 @@ class BuilderMixin
             return $this;
         };
     }
+
+    /**
+     * @param string $vectorQuery
+     *
+     * @return \Closure
+     */
+    public function vectorQuery(): Closure
+    {
+        return function (string $vectorQuery) {
+            $this->engine()->vectorQuery($vectorQuery);
+
+            return $this;
+        };
+    }
+
+    /**
+     * @param string     $field
+     * @param array      $vector
+     * @param int        $k
+     * @param float|null $distanceThreshold
+     * @param float|null $alpha
+     *
+     * @return \Closure
+     */
+    public function nearestNeighbors(): Closure
+    {
+        return function (string $field, array $vector, int $k = 10, ?float $distanceThreshold = null, ?float $alpha = null) {
+            $this->engine()->nearestNeighbors($field, $vector, $k, $distanceThreshold, $alpha);
+
+            return $this;
+        };
+    }
 }

@@ -236,8 +236,78 @@ class Todo extends Model implements TypesenseDocument
 ```
 
 #### Usage
+
+Generate a scoped search key from a parent search-only API key, embedding the
+parameters you want to enforce (e.g. a per-tenant `filter_by` and/or an
+`expires_at`), then use it for searching:
+
 ```php
-Todo::setScopedApiKey('xyz')->search('todo')->get();
+// Generate a scoped key that locks searches to a single tenant.
+$scopedKey = Todo::generateScopedSearchKey('parent-search-only-key', [
+    'filter_by'  => 'company_id:42',
+    'expires_at' => now()->addHour()->timestamp,
+]);
+
+// Use a (pre-)generated scoped key for subsequent searches.
+Todo::setScopedApiKey($scopedKey)->search('todo')->get();
+```
+
+You can also create new API keys server-side:
+
+```php
+app(\Siberfx\Typesense\Typesense::class)->createApiKey([
+    'description' => 'Search-only key',
+    'actions'     => ['documents:search'],
+    'collections' => ['*'],
+]);
+```
+
+### Filtering
+
+Standard Scout `where`, `whereIn` and `whereNotIn` clauses are supported:
+
+```php
+Todo::search('shoes')
+    ->where('user_id', 1)
+    ->whereIn('status', ['open', 'in_progress'])
+    ->whereNotIn('team_id', [9, 10])
+    ->get();
+```
+
+For comparison and range filters, pass the operator as an array value:
+
+```php
+Todo::search('shoes')
+    ->where('price', ['>', 100])        // price:>100
+    ->where('rating', ['[3..5]'])       // rating:[3..5]
+    ->get();
+```
+
+Boolean values are rendered as Typesense literals (`true`/`false`) automatically.
+
+### Vector / Hybrid Search
+
+Search a vector field by nearest neighbours. Use `nearestNeighbors()` to build
+the `vector_query` for you:
+
+```php
+// Pure vector search: query '*' plus a vector field.
+Todo::search('*')
+    ->nearestNeighbors('embedding', [0.12, 0.34, 0.56], k: 10)
+    ->get();
+
+// Hybrid search: combine a text query with a vector query.
+Todo::search('running shoes')
+    ->nearestNeighbors('embedding', $vector, k: 20, distanceThreshold: 0.3, alpha: 0.4)
+    ->get();
+```
+
+Or pass a raw `vector_query` string for full control:
+
+```php
+Todo::search('*')
+    ->vectorQuery('embedding:([0.12, 0.34, 0.56], k:10, alpha:0.4)')
+    ->get();
 ```
 
 ## Migrating from siberfx/laravel-typesense

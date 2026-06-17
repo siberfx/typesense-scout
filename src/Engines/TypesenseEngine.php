@@ -153,6 +153,11 @@ class TypesenseEngine extends Engine
     private ?string $prefix = null;
 
     /**
+     * @var string
+     */
+    private string $vectorQuery = '';
+
+    /**
      * TypesenseEngine constructor.
      *
      * @param Typesense $typesense
@@ -312,6 +317,10 @@ class TypesenseEngine extends Engine
         
         if (!empty($this->prefix)) {
             $params['prefix'] = $this->prefix;
+        }
+
+        if (!empty($this->vectorQuery)) {
+            $params['vector_query'] = $this->vectorQuery;
         }
 
         return $params;
@@ -926,6 +935,56 @@ class TypesenseEngine extends Engine
     public function setPrefix(string $prefix): static
     {
         $this->prefix = $prefix;
+
+        return $this;
+    }
+
+    /**
+     * Set a raw Typesense `vector_query` string for semantic / hybrid search.
+     *
+     * Use this for full control, e.g.
+     * "embedding:([0.1, 0.2, 0.3], k:10, distance_threshold:0.3, alpha:0.4)".
+     *
+     * For a pure vector search set the query to "*" (e.g. Model::search('*')).
+     * Providing both a text query and a vector_query performs a hybrid search.
+     *
+     * @param string $vectorQuery
+     *
+     * @return $this
+     */
+    public function vectorQuery(string $vectorQuery): static
+    {
+        $this->vectorQuery = $vectorQuery;
+
+        return $this;
+    }
+
+    /**
+     * Build a `vector_query` for nearest-neighbour / hybrid search against a
+     * vector field, without hand-writing the Typesense syntax.
+     *
+     * @param string     $field             The vector field to search against.
+     * @param array      $vector            The query embedding (array of floats).
+     * @param int        $k                 Number of nearest neighbours to return.
+     * @param float|null $distanceThreshold Optional max vector distance.
+     * @param float|null $alpha             Optional hybrid weight (0..1) between
+     *                                      keyword and vector ranking.
+     *
+     * @return $this
+     */
+    public function nearestNeighbors(string $field, array $vector, int $k = 10, ?float $distanceThreshold = null, ?float $alpha = null): static
+    {
+        $options = ['k:' . $k];
+
+        if ($distanceThreshold !== null) {
+            $options[] = 'distance_threshold:' . $distanceThreshold;
+        }
+
+        if ($alpha !== null) {
+            $options[] = 'alpha:' . $alpha;
+        }
+
+        $this->vectorQuery = sprintf('%s:([%s], %s)', $field, implode(', ', $vector), implode(', ', $options));
 
         return $this;
     }
