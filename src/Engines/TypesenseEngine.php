@@ -408,9 +408,17 @@ class TypesenseEngine extends Engine
             ->values()
             ->implode(' && ');
 
-        return $whereFilter . (
-            ($whereFilter !== '' && $whereInFilter !== '') ? ' && ' : ''
-            ) . $whereInFilter;
+        $whereNotInFilter = collect($builder->whereNotIns)
+            ->map([
+                $this,
+                'parseWhereNotInFilter',
+            ])
+            ->values()
+            ->implode(' && ');
+
+        return collect([$whereFilter, $whereInFilter, $whereNotInFilter])
+            ->filter(static fn (string $filter): bool => $filter !== '')
+            ->implode(' && ');
     }
 
     /**
@@ -441,6 +449,19 @@ class TypesenseEngine extends Engine
     public function parseWhereInFilter(array $value, string $key): string
     {
         return sprintf('%s:=%s', $key, '[' . implode(', ', $value) . ']');
+    }
+
+    /**
+     * Parse typesense whereNotIn filter.
+     *
+     * @param array $value
+     * @param string $key
+     *
+     * @return string
+     */
+    public function parseWhereNotInFilter(array $value, string $key): string
+    {
+        return sprintf('%s:!=%s', $key, '[' . implode(', ', $value) . ']');
     }
 
     /**

@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - Laravel 13 support.
+- `whereNotIn()` support in the search engine — Scout's `whereNotIn` now
+  produces a Typesense `field:!=[...]` filter (previously silently ignored).
+- Test suite: PHPUnit harness with unit coverage for filter generation and the
+  published config shape.
+
+### Fixed
+- Config mismatch: the published `config/scout.php` now nests Typesense
+  connection settings under `typesense.client-settings`, the key the service
+  provider and `Typesense` class actually read. Previously the shipped config
+  was flat, so `new Client(null)` would fail out of the box. Settings now also
+  honour `TYPESENSE_*` environment variables.
 
 ### Changed
 - Require PHP `^8.4`.
