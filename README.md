@@ -1,6 +1,6 @@
 # Laravel Scout Typesense Driver 
 
-This package makes it easy to add full text search support to your models with Laravel 12+. 
+This package makes it easy to add full text search support to your models with Laravel 12 and 13. 
 
 > [!IMPORTANT] 
 > The features from the Scout driver in this repo have been merged upstream into [Laravel Scout natively](https://laravel.com/docs/11.x/scout#typesense).
