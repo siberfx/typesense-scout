@@ -353,6 +353,49 @@ $typesense->retrieveAnalyticsRule('popular-todos');
 $typesense->deleteAnalyticsRule('popular-todos');
 ```
 
+### Presets, Stopwords, Stemming, Conversation & NL Models
+
+```php
+use Siberfx\Typesense\Typesense;
+
+$typesense = app(Typesense::class);
+
+// Search presets
+$typesense->upsertPreset('listing', ['value' => ['query_by' => 'name']]);
+$typesense->retrievePresets();
+$typesense->retrievePreset('listing');
+$typesense->deletePreset('listing');
+
+// Stopwords
+$typesense->upsertStopword('common', ['stopwords' => ['a', 'the'], 'locale' => 'en']);
+$typesense->retrieveStopwords();
+$typesense->retrieveStopword('common');
+$typesense->deleteStopword('common');
+
+// Stemming dictionaries (no delete endpoint)
+$typesense->upsertStemmingDictionary('plurals', [['word' => 'people', 'root' => 'person']]);
+$typesense->retrieveStemmingDictionaries();
+$typesense->retrieveStemmingDictionary('plurals');
+
+// Conversation models (conversational / RAG search)
+$typesense->createConversationModel([
+    'model_name'         => 'openai/gpt-3.5-turbo',
+    'api_key'            => 'OPENAI_API_KEY',
+    'history_collection' => 'conversation_store',
+]);
+$typesense->retrieveConversationModels();
+$typesense->retrieveConversationModel('model-id');
+$typesense->updateConversationModel('model-id', ['system_prompt' => '...']);
+$typesense->deleteConversationModel('model-id');
+
+// Natural language search models
+$typesense->createNLSearchModel(['model_name' => 'openai/gpt-4', 'api_key' => '...']);
+$typesense->retrieveNLSearchModels();
+$typesense->retrieveNLSearchModel('nl-model-id');
+$typesense->updateNLSearchModel('nl-model-id', [/* ... */]);
+$typesense->deleteNLSearchModel('nl-model-id');
+```
+
 ## Migrating from siberfx/laravel-typesense
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
 - The Scout driver is now called `typesense`, instead of `typesensesearch`. This should be reflected by setting the SCOUT_DRIVER env var to `typesense`,

@@ -41,6 +41,32 @@ class AdminApiSurfaceTest extends TestCase
             'retrieveAnalyticsRules' => ['retrieveAnalyticsRules', 0],
             'retrieveAnalyticsRule' => ['retrieveAnalyticsRule', 1],
             'deleteAnalyticsRule' => ['deleteAnalyticsRule', 1],
+            // Presets
+            'upsertPreset' => ['upsertPreset', 2],
+            'retrievePresets' => ['retrievePresets', 0],
+            'retrievePreset' => ['retrievePreset', 1],
+            'deletePreset' => ['deletePreset', 1],
+            // Stopwords
+            'upsertStopword' => ['upsertStopword', 2],
+            'retrieveStopwords' => ['retrieveStopwords', 0],
+            'retrieveStopword' => ['retrieveStopword', 1],
+            'deleteStopword' => ['deleteStopword', 1],
+            // Stemming dictionaries
+            'upsertStemmingDictionary' => ['upsertStemmingDictionary', 2],
+            'retrieveStemmingDictionaries' => ['retrieveStemmingDictionaries', 0],
+            'retrieveStemmingDictionary' => ['retrieveStemmingDictionary', 1],
+            // Conversation models (RAG)
+            'createConversationModel' => ['createConversationModel', 1],
+            'retrieveConversationModels' => ['retrieveConversationModels', 0],
+            'retrieveConversationModel' => ['retrieveConversationModel', 1],
+            'updateConversationModel' => ['updateConversationModel', 2],
+            'deleteConversationModel' => ['deleteConversationModel', 1],
+            // Natural language search models
+            'createNLSearchModel' => ['createNLSearchModel', 1],
+            'retrieveNLSearchModels' => ['retrieveNLSearchModels', 0],
+            'retrieveNLSearchModel' => ['retrieveNLSearchModel', 1],
+            'updateNLSearchModel' => ['updateNLSearchModel', 2],
+            'deleteNLSearchModel' => ['deleteNLSearchModel', 1],
         ];
     }
 

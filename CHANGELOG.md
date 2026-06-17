@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Curation / overrides: `upsertOverride`, `retrieveOverrides`, `retrieveOverride`, `deleteOverride`.
   - Collection aliases: `upsertAlias`, `retrieveAliases`, `retrieveAlias`, `deleteAlias`.
   - Analytics rules: `upsertAnalyticsRule`, `retrieveAnalyticsRules`, `retrieveAnalyticsRule`, `deleteAnalyticsRule`.
+  - Search presets: `upsertPreset`, `retrievePresets`, `retrievePreset`, `deletePreset`.
+  - Stopwords: `upsertStopword`, `retrieveStopwords`, `retrieveStopword`, `deleteStopword`.
+  - Stemming dictionaries: `upsertStemmingDictionary`, `retrieveStemmingDictionaries`, `retrieveStemmingDictionary`.
+  - Conversation models (RAG): `createConversationModel`, `retrieveConversationModels`, `retrieveConversationModel`, `updateConversationModel`, `deleteConversationModel`.
+  - Natural language search models: `createNLSearchModel`, `retrieveNLSearchModels`, `retrieveNLSearchModel`, `updateNLSearchModel`, `deleteNLSearchModel`.
 - Test suite: PHPUnit harness with unit coverage for filter generation,
   filter-value normalisation, scoped key generation, and the published config
   shape.

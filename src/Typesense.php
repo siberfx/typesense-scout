@@ -516,4 +516,323 @@ class Typesense
     {
         return $this->client->getAnalytics()->rules()[$ruleName]->delete();
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search Presets
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a search preset.
+     *
+     * @param string $presetName
+     * @param array  $presetsData e.g. ['value' => ['query_by' => 'name', 'sort_by' => '_text_match:desc']].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertPreset(string $presetName, array $presetsData): array
+    {
+        return $this->client->getPresets()->upsert($presetName, $presetsData);
+    }
+
+    /**
+     * Retrieve all search presets.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrievePresets(): array
+    {
+        return $this->client->getPresets()->retrieve();
+    }
+
+    /**
+     * Retrieve a single search preset.
+     *
+     * @param string $presetName
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrievePreset(string $presetName): array
+    {
+        return $this->client->getPresets()[$presetName]->retrieve();
+    }
+
+    /**
+     * Delete a search preset.
+     *
+     * @param string $presetName
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deletePreset(string $presetName): array
+    {
+        return $this->client->getPresets()[$presetName]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stopwords
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a stopwords set.
+     *
+     * @param string $name
+     * @param array  $config e.g. ['stopwords' => ['a', 'the'], 'locale' => 'en'].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertStopword(string $name, array $config): array
+    {
+        return $this->client->getStopwords()->put(array_merge($config, ['name' => $name]));
+    }
+
+    /**
+     * Retrieve all stopwords sets.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveStopwords(): array
+    {
+        return $this->client->getStopwords()->getAll();
+    }
+
+    /**
+     * Retrieve a single stopwords set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveStopword(string $name): array
+    {
+        return $this->client->getStopwords()->get($name);
+    }
+
+    /**
+     * Delete a stopwords set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteStopword(string $name): array
+    {
+        return $this->client->getStopwords()->delete($name);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stemming Dictionaries
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a stemming dictionary.
+     *
+     * @param string $id
+     * @param array  $wordRootCombinations e.g. [['word' => 'people', 'root' => 'person']].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertStemmingDictionary(string $id, array $wordRootCombinations): array
+    {
+        return $this->client->getStemming()->dictionaries()->upsert($id, $wordRootCombinations);
+    }
+
+    /**
+     * Retrieve all stemming dictionaries.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveStemmingDictionaries(): array
+    {
+        return $this->client->getStemming()->dictionaries()->retrieve();
+    }
+
+    /**
+     * Retrieve a single stemming dictionary.
+     *
+     * @param string $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveStemmingDictionary(string $id): array
+    {
+        return $this->client->getStemming()->dictionaries()[$id]->retrieve();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Conversation Models (RAG)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create a conversation model (used for conversational / RAG search).
+     *
+     * @param array $params e.g. ['model_name' => 'openai/gpt-3.5-turbo', 'api_key' => '...', 'history_collection' => '...'].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function createConversationModel(array $params): array
+    {
+        return $this->client->getConversations()->getModels()->create($params);
+    }
+
+    /**
+     * Retrieve all conversation models.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveConversationModels(): array
+    {
+        return $this->client->getConversations()->getModels()->retrieve();
+    }
+
+    /**
+     * Retrieve a single conversation model.
+     *
+     * @param string $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveConversationModel(string $id): array
+    {
+        return $this->client->getConversations()->getModels()[$id]->retrieve();
+    }
+
+    /**
+     * Update a conversation model.
+     *
+     * @param string $id
+     * @param array  $params
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function updateConversationModel(string $id, array $params): array
+    {
+        return $this->client->getConversations()->getModels()[$id]->update($params);
+    }
+
+    /**
+     * Delete a conversation model.
+     *
+     * @param string $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteConversationModel(string $id): array
+    {
+        return $this->client->getConversations()->getModels()[$id]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Natural Language Search Models
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create a natural language search model.
+     *
+     * @param array $params
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function createNLSearchModel(array $params): array
+    {
+        return $this->client->getNLSearchModels()->create($params);
+    }
+
+    /**
+     * Retrieve all natural language search models.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveNLSearchModels(): array
+    {
+        return $this->client->getNLSearchModels()->retrieve();
+    }
+
+    /**
+     * Retrieve a single natural language search model.
+     *
+     * @param string $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveNLSearchModel(string $id): array
+    {
+        return $this->client->getNLSearchModels()[$id]->retrieve();
+    }
+
+    /**
+     * Update a natural language search model.
+     *
+     * @param string $id
+     * @param array  $params
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function updateNLSearchModel(string $id, array $params): array
+    {
+        return $this->client->getNLSearchModels()[$id]->update($params);
+    }
+
+    /**
+     * Delete a natural language search model.
+     *
+     * @param string $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteNLSearchModel(string $id): array
+    {
+        return $this->client->getNLSearchModels()[$id]->delete();
+    }
 }
