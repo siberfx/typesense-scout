@@ -1,6 +1,8 @@
 name: Run Package Tests
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -8,15 +10,28 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [16.x]
-        typesense-version: [0.24.0]
+        php: ['8.4']
+        # lowest  -> Laravel 12 / scout 11.0 / typesense-php 5.0
+        # highest -> Laravel 13 / latest scout / typesense-php 5.x
+        dependency-versions: ['lowest', 'highest']
+        typesense-version: ['27.1']
+
+    name: PHP ${{ matrix.php }} - deps ${{ matrix.dependency-versions }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          submodules: 'recursive'
+          php-version: ${{ matrix.php }}
+          extensions: curl, mbstring, json
+          coverage: none
 
       - name: Start Typesense
         uses: jirevwe/typesense-github-action@v1.0.1
@@ -25,28 +40,31 @@ jobs:
           typesense-port: 8108
           typesense-api-key: xyz
 
-      - name: Composer Validate
-        run: composer validate
+      - name: Validate composer.json
+        run: composer validate --no-check-publish --no-check-lock
 
-      - name: Cache Composer Packages
-        id: composer-cache
-        uses: actions/cache@v2
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
         with:
-          path: vendor
-          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-
+          dependency-versions: ${{ matrix.dependency-versions }}
+          composer-options: --prefer-dist
 
-      - name: Cache dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.npm
-          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Install Dependencies
+      - name: Wait for Typesense
         run: |
-           composer update --prefer-dist --no-interaction --no-progress
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8108/health; then
+              echo "Typesense is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Typesense did not become healthy in time"
+          exit 1
 
-      - name: Run Tests
-        run:  vendor/bin/phpunit tests
+      - name: Run tests
+        run: vendor/bin/phpunit
+        env:
+          TYPESENSE_HOST: localhost
+          TYPESENSE_PORT: 8108
+          TYPESENSE_PROTOCOL: http
+          TYPESENSE_API_KEY: xyz

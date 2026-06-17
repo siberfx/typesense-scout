@@ -51,6 +51,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   honour `TYPESENSE_*` environment variables.
 
 ### Changed
+- CI workflows aligned with the codebase: set up PHP 8.4, test the dependency
+  range via a `lowest`/`highest` matrix (Laravel 12 and 13), bump Typesense to
+  27.1, update actions to current major versions, drop the unused Node matrix,
+  and run the MySQL-backed project test against a MySQL service container.
 - Require PHP `^8.4`.
 - Resolved the `main` merge between local and remote: PHP set to `^8.4`,
   `typesense/typesense-php` set to `^5.0`.

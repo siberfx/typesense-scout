@@ -8,69 +8,77 @@ jobs:
   scout-import-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      matrix:
-        node-version: [16.x]
-        typesense-version: [0.24.0]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: test
+      DB_USERNAME: root
+      DB_PASSWORD: root
 
     steps:
-      - name: Start Typesense
-        uses: jirevwe/typesense-github-action@v1.0.1
-        with:
-          typesense-version: ${{ matrix.typesense-version }}
-          typesense-port: 8108
-          typesense-api-key: xyz
-
-      - name: Curl Typesense
-        run: sleep 10 && curl http://localhost:8108/health
-
-      - name: Install MySQL client
-        run: sudo apt-get update && sudo apt-get install mysql-client
-
-      - name: Run MySQL client
-        run: sudo service mysql start
-
-      - name: Run SQL script
-        run: |
-          mysql -h 127.0.0.1 -u root -p'root' -e "CREATE DATABASE test;"
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout test application
+        uses: actions/checkout@v4
         with:
           repository: arayiksmbatyan/scout-import-tests
 
-      - name: Composer Validate
-        run: composer validate
-
-      - name: Cache Composer Packages
-        id: composer-cache
-        uses: actions/cache@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          path: vendor
-          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-php-
+          php-version: '8.4'
+          extensions: curl, mbstring, json, pdo_mysql
+          coverage: none
 
-      - name: Cache dependencies
-        uses: actions/cache@v2
+      - name: Start Typesense
+        uses: jirevwe/typesense-github-action@v1.0.1
         with:
-          path: |
-            ~/.npm
-          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          typesense-version: '27.1'
+          typesense-port: 8108
+          typesense-api-key: xyz
 
-      - name: Prepare Application Environment
+      - name: Wait for Typesense
         run: |
-          cp .env.example .env
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8108/health; then
+              echo "Typesense is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Typesense did not become healthy in time"
+          exit 1
 
-      - name: Install Dependencies
-        run: |
-           composer update --prefer-dist --no-interaction --no-progress
+      - name: Validate composer.json
+        run: composer validate --no-check-publish --no-check-lock
 
-      - name: Generate Application Key
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          composer-options: --prefer-dist
+
+      - name: Prepare application environment
+        run: cp .env.example .env
+
+      - name: Generate application key
         run: php artisan key:generate
 
-      - name: Run Migrations and Seeders
+      - name: Run migrations and seeders
         run: php artisan migrate --seed
 
-      - name: Run Tests
+      - name: Run tests
         run: php artisan test
