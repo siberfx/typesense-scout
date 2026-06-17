@@ -37,6 +37,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Test suite: PHPUnit harness with unit coverage for filter generation,
   filter-value normalisation, scoped key generation, and the published config
   shape.
+- Guarded integration test suite (`tests/Integration`) that exercises real
+  end-to-end flows (collections, documents, filtered search, synonyms,
+  overrides, aliases, presets, stopwords) against a live Typesense server, and
+  skips automatically when none is reachable (configurable via `TYPESENSE_*`
+  environment variables).
 
 ### Fixed
 - Config mismatch: the published `config/scout.php` now nests Typesense

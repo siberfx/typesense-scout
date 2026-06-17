@@ -403,6 +403,28 @@ $typesense->deleteNLSearchModel('nl-model-id');
 - Instead of importing `Siberfx\Typesense\*`, you should import `Siberfx\Typesense\*`
 - Instead of models implementing `Siberfx\Typesense\Interfaces\TypesenseSearch`, they should implement `Siberfx\Typesense\Interfaces\TypesenseDocument`
 
+## Testing
+
+```bash
+composer install
+vendor/bin/phpunit
+```
+
+The suite has two groups:
+
+- **Unit** — pure logic (filter building, scoped key generation, config shape,
+  public API surface). No server required.
+- **Integration** — end-to-end flows against a real Typesense server
+  (collections, documents, filtered search, synonyms, overrides, aliases,
+  presets, stopwords). These are **skipped automatically** when no server is
+  reachable. Point them at a server via environment variables:
+
+  ```bash
+  TYPESENSE_HOST=localhost TYPESENSE_PORT=8108 \
+  TYPESENSE_PROTOCOL=http TYPESENSE_API_KEY=xyz \
+  vendor/bin/phpunit --testsuite Integration
+  ```
+
 ## Authors
 Anonymous
 
