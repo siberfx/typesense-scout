@@ -4,6 +4,7 @@ namespace Siberfx\Typesense;
 
 use Siberfx\Typesense\Engines\TypesenseEngine;
 use Siberfx\Typesense\Mixin\BuilderMixin;
+use Siberfx\Typesense\Standalone\TypesenseManager;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Scout\Builder;
@@ -32,6 +33,12 @@ class TypesenseServiceProvider extends ServiceProvider
         });
 
         $this->registerMacros();
+
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__ . '/../config/typesense.php' => $this->app->configPath('typesense.php'),
+            ], 'typesense-config');
+        }
     }
 
     /**
@@ -46,6 +53,17 @@ class TypesenseServiceProvider extends ServiceProvider
         });
 
         $this->app->alias(Typesense::class, 'typesense');
+
+        $this->mergeConfigFrom(__DIR__ . '/../config/typesense.php', 'typesense');
+
+        $this->app->singleton('typesense.manager', static function ($app) {
+            return TypesenseManager::fromConfig(
+                $app['config']->get('typesense', []),
+                $app['config']->get('scout.typesense.client-settings', []),
+            );
+        });
+
+        $this->app->alias('typesense.manager', TypesenseManager::class);
     }
 
     /**
