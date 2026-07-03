@@ -112,8 +112,9 @@ Only the `default` connection gets the Scout fallback; named clusters are explic
   `multiSearch(array $searches, array $common = [])`, `union(array $searches, array $common = [])`.
 - **Admin passthroughs (thin):** `keys()`, `generateScopedSearchKey($searchKey, $params)`,
   `aliases()`, `presets()`, `stopwords()`, `stemming()`, `conversations()`,
-  `nlSearchModels()`, and the **v6 additions** `synonymSets()`, `curationSets()`,
-  `analyticsV1()`, plus `analytics()`.
+  `nlSearchModels()`, `analytics()`. (The **v6-only additions** `synonymSets()`,
+  `curationSets()`, `analyticsV1()` land in **Phase 2** — they do not exist on the
+  installed v5.2 client, so Phase 1 stays on `^5.0` and ships independently.)
 - **Ops:** `health()`, `metrics()`, `debug()`, `operations()`.
 
 Admin passthroughs return the underlying typesense-php resource objects so callers
