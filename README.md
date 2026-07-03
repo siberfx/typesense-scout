@@ -399,14 +399,65 @@ $typesense->deleteNLSearchModel('nl-model-id');
 
 ## Standalone Typesense (without Scout)
 
-Talk to Typesense **directly** — no Scout model, no `Searchable` trait — via the
-`TypesenseDirect` facade or the `typesense.manager` container binding. This is
-the right tool when you need full control: hand-built schemas, bulk imports,
-federated `multi_search`, multiple clusters, and the admin APIs (keys, aliases,
-presets, analytics, …) that the Scout driver doesn't surface.
+Love using Scout with your Eloquent models, but every now and then you just want
+to **talk to Typesense directly**? Maybe you're indexing data that isn't a model,
+building a collection schema by hand, running a federated `multi_search`, or
+reaching an admin API (keys, aliases, presets, analytics…) that Scout doesn't
+expose. That's exactly what this is for.
 
-It runs **alongside** the Scout driver and shares nothing with it at runtime —
-using it never changes how `Model::search()` behaves.
+Meet **`TypesenseDirect`** — a friendly, Scout-free way to use the raw Typesense
+client, with a clean helper API on top and multi-cluster support built in.
+
+> [!NOTE]
+> This lives happily **next to** the Scout driver and shares nothing with it at
+> runtime. Reaching for `TypesenseDirect` never changes how your models'
+> `Model::search()` behaves — use whichever fits the moment.
+
+**Which one do I want?**
+
+| You want to… | Use |
+|---|---|
+| Search your Eloquent models the Laravel way | Scout (`Model::search(...)`) |
+| Index/search data that isn't a model, or build schemas by hand | `TypesenseDirect` |
+| Bulk-import, federated `multi_search`, or talk to a 2nd cluster | `TypesenseDirect` |
+| Manage keys / aliases / presets / analytics / stopwords | `TypesenseDirect` |
+| Drop down to the raw `\Typesense\Client` | `TypesenseDirect::connection()->client()` |
+
+### Your first search in 60 seconds ⏱️
+
+Already using the Scout driver? Then there's **nothing to configure** — the
+`default` connection reuses your existing Typesense credentials. Copy this into a
+route, `tinker`, or a command and run it:
+
+```php
+// 1. Create a collection
+TypesenseDirect::ensureCollection([
+    'name'   => 'books',
+    'fields' => [
+        ['name' => 'title', 'type' => 'string'],
+        ['name' => 'year',  'type' => 'int32'],
+    ],
+    'default_sorting_field' => 'year',
+]);
+
+// 2. Add some documents (bulk)
+TypesenseDirect::documents('books')->import([
+    ['id' => '1', 'title' => 'Dune',        'year' => 1965],
+    ['id' => '2', 'title' => 'Neuromancer', 'year' => 1984],
+], 'upsert');
+
+// 3. Search 🎉
+$results = TypesenseDirect::search('books', [
+    'q'        => 'dune',
+    'query_by' => 'title',
+]);
+
+echo $results['found'];                       // 1
+echo $results['hits'][0]['document']['title']; // "Dune"
+```
+
+That's the whole loop: **create → import → search**. Everything below is just
+more of the same surface, one topic at a time.
 
 ### Setup
 
@@ -444,10 +495,14 @@ return [
 ];
 ```
 
-> The Scout fallback applies **only** to the `default` connection. Named
-> connections (like `analytics` above) must be fully specified.
+> [!TIP]
+> The Scout fallback applies **only** to the `default` connection, so existing
+> apps get standalone access for free. Named connections (like `analytics`
+> above) are fully independent and must be spelled out completely.
 
 ### Three ways to reach it
+
+Pick whatever reads best where you are — they all end up at the same place:
 
 ```php
 use Siberfx\Typesense\Standalone\TypesenseManager;
@@ -621,9 +676,11 @@ $client->getCollections()['books']->getSynonyms()->upsert('coat-synonyms', [
 | Ops | `health`, `metrics`, `debug`, `operations` |
 | Escape hatch | `client()` |
 
-> **Version note:** this standalone client targets `typesense/typesense-php ^5`
-> (server v29+). Global synonym sets, global curation sets, and the analytics
-> v1/v2 split are part of the planned v6 upgrade and are not exposed yet.
+> [!NOTE]
+> This standalone client targets `typesense/typesense-php ^5` (server v29+).
+> Global synonym sets, global curation sets, and the analytics v1/v2 split
+> arrive with the planned v6 upgrade and aren't exposed yet — reach for the
+> `client()` escape hatch if you need them today.
 
 ## Migrating from siberfx/laravel-typesense
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`

@@ -55,6 +55,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   honour `TYPESENSE_*` environment variables.
 
 ### Changed
+- README: documented the full standalone (`TypesenseDirect`) API — collections,
+  documents, single & federated search, scoped keys, admin resources, cluster
+  ops, and the raw `client()` escape hatch — with a beginner-friendly
+  "first search in 60 seconds" guide, a Scout-vs-standalone comparison, and an
+  API summary table.
 - CI workflows aligned with the codebase: set up PHP 8.4, test the dependency
   range via a `lowest`/`highest` matrix (Laravel 12 and 13), bump Typesense to
   27.1, update actions to current major versions, drop the unused Node matrix,
