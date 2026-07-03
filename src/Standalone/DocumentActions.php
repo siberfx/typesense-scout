@@ -60,9 +60,9 @@ class DocumentActions
      *
      * @param iterable|string $documents
      * @param string          $action    create|upsert|update|emplace
-     * @return array The per-line import results.
+     * @return array|string The per-line import results.
      */
-    public function import($documents, string $action = 'upsert'): array
+    public function import($documents, string $action = 'upsert'): array|string
     {
         return $this->documents()->import($documents, ['action' => $action]);
     }
