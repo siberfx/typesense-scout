@@ -34,7 +34,8 @@
                 "Siberfx\\Typesense\\TypesenseServiceProvider"
             ],
             "aliases": {
-                "Typesense": "Siberfx\\Typesense\\TypesenseFacade"
+                "Typesense": "Siberfx\\Typesense\\TypesenseFacade",
+                "TypesenseDirect": "Siberfx\\Typesense\\Standalone\\TypesenseStandaloneFacade"
             }
         }
     },
