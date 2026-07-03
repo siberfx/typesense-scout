@@ -49,6 +49,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - v6 global resources on the standalone client: `TypesenseDirect::synonymSets()`,
   `curationSets()`, and `analyticsV1()` (Typesense server 30+).
 
+### Deprecated
+- Per-collection synonym and curation/override methods on `Typesense`
+  (`upsertSynonym`, `retrieveSynonyms`, `retrieveSynonym`, `deleteSynonym`,
+  `upsertOverride`, `retrieveOverrides`, `retrieveOverride`, `deleteOverride`).
+  Typesense server **v30 removed the per-collection synonyms/curation
+  endpoints** (they now 404); use the global synonym sets / curation sets
+  instead — `TypesenseDirect::synonymSets()` / `curationSets()`. The methods are
+  kept for talking to servers older than v30 and will be removed in a future
+  major release. The admin integration tests now exercise the global resources.
+
 ### Fixed
 - Config mismatch: the published `config/scout.php` now nests Typesense
   connection settings under `typesense.client-settings`, the key the service

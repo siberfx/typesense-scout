@@ -265,12 +265,20 @@ class Typesense
 
     /*
     |--------------------------------------------------------------------------
-    | Synonyms (per collection)
+    | Synonyms (per collection) — DEPRECATED on Typesense server v30+
+    |
+    | Per-collection synonyms were removed in Typesense server v30 (replaced by
+    | global "synonym sets"). These methods only work against server < 30; on
+    | v30+ they return 404. Use global synonym sets instead:
+    | TypesenseDirect::synonymSets() (or \Typesense\Client::getSynonymSets()).
     |--------------------------------------------------------------------------
     */
 
     /**
      * Create or update a synonym for a collection.
+     *
+     * @deprecated Removed in Typesense server v30; use global synonym sets
+     *             (TypesenseDirect::synonymSets()). Works only on server < 30.
      *
      * @param string $collectionName
      * @param string $synonymId
@@ -288,6 +296,9 @@ class Typesense
     /**
      * Retrieve all synonyms for a collection.
      *
+     * @deprecated Removed in Typesense server v30; use global synonym sets
+     *             (TypesenseDirect::synonymSets()). Works only on server < 30.
+     *
      * @param string $collectionName
      *
      * @return array
@@ -301,6 +312,9 @@ class Typesense
 
     /**
      * Retrieve a single synonym from a collection.
+     *
+     * @deprecated Removed in Typesense server v30; use global synonym sets
+     *             (TypesenseDirect::synonymSets()). Works only on server < 30.
      *
      * @param string $collectionName
      * @param string $synonymId
@@ -317,6 +331,9 @@ class Typesense
     /**
      * Delete a synonym from a collection.
      *
+     * @deprecated Removed in Typesense server v30; use global synonym sets
+     *             (TypesenseDirect::synonymSets()). Works only on server < 30.
+     *
      * @param string $collectionName
      * @param string $synonymId
      *
@@ -331,12 +348,20 @@ class Typesense
 
     /*
     |--------------------------------------------------------------------------
-    | Overrides / Curation (per collection)
+    | Overrides / Curation (per collection) — DEPRECATED on Typesense server v30+
+    |
+    | Per-collection overrides/curation were removed in Typesense server v30
+    | (replaced by global "curation sets"). These methods only work against
+    | server < 30; on v30+ they return 404. Use global curation sets instead:
+    | TypesenseDirect::curationSets() (or \Typesense\Client::getCurationSets()).
     |--------------------------------------------------------------------------
     */
 
     /**
      * Create or update a curation override for a collection.
+     *
+     * @deprecated Removed in Typesense server v30; use global curation sets
+     *             (TypesenseDirect::curationSets()). Works only on server < 30.
      *
      * @param string $collectionName
      * @param string $overrideId
@@ -354,6 +379,9 @@ class Typesense
     /**
      * Retrieve all curation overrides for a collection.
      *
+     * @deprecated Removed in Typesense server v30; use global curation sets
+     *             (TypesenseDirect::curationSets()). Works only on server < 30.
+     *
      * @param string $collectionName
      *
      * @return array
@@ -367,6 +395,9 @@ class Typesense
 
     /**
      * Retrieve a single curation override from a collection.
+     *
+     * @deprecated Removed in Typesense server v30; use global curation sets
+     *             (TypesenseDirect::curationSets()). Works only on server < 30.
      *
      * @param string $collectionName
      * @param string $overrideId
@@ -382,6 +413,9 @@ class Typesense
 
     /**
      * Delete a curation override from a collection.
+     *
+     * @deprecated Removed in Typesense server v30; use global curation sets
+     *             (TypesenseDirect::curationSets()). Works only on server < 30.
      *
      * @param string $collectionName
      * @param string $overrideId

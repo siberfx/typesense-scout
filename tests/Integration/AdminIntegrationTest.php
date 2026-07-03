@@ -3,8 +3,12 @@
 namespace Siberfx\Typesense\Tests\Integration;
 
 /**
- * End-to-end coverage for the admin wrappers on the Typesense class against a
- * real server: synonyms, curation/overrides, aliases, presets and stopwords.
+ * End-to-end coverage for the admin surface against a real server: global
+ * synonym sets, global curation sets, aliases, presets and stopwords.
+ *
+ * Synonyms and curation are exercised through the v30 global resources
+ * (synonym_sets / curation_sets); the per-collection wrappers on Typesense are
+ * deprecated and 404 on server v30+.
  *
  * Conversation / NL-search models and analytics rules are intentionally not
  * exercised here: they require server features and external provider keys
@@ -38,37 +42,64 @@ class AdminIntegrationTest extends IntegrationTestCase
         parent::tearDown();
     }
 
-    public function test_synonyms_lifecycle(): void
+    public function test_global_synonym_sets_lifecycle(): void
     {
-        $this->typesense->upsertSynonym(self::COLLECTION, 'coat-synonyms', [
-            'synonyms' => ['blazer', 'coat', 'jacket'],
+        $name = 'integration_synonym_set';
+        $this->deleteSynonymSetQuietly($name);
+
+        $created = $this->client->getSynonymSets()->upsert($name, [
+            'items' => [
+                ['id' => 'coats', 'synonyms' => ['blazer', 'coat', 'jacket']],
+            ],
         ]);
+        $this->assertNotEmpty($created);
 
-        $all = $this->typesense->retrieveSynonyms(self::COLLECTION);
-        $this->assertNotEmpty($all['synonyms']);
+        $one = $this->client->getSynonymSets()[$name]->retrieve();
+        $this->assertNotEmpty($one);
 
-        $one = $this->typesense->retrieveSynonym(self::COLLECTION, 'coat-synonyms');
-        $this->assertSame('coat-synonyms', $one['id']);
-
-        $deleted = $this->typesense->deleteSynonym(self::COLLECTION, 'coat-synonyms');
-        $this->assertSame('coat-synonyms', $deleted['id']);
+        $this->client->getSynonymSets()[$name]->delete();
+        $this->deleteSynonymSetQuietly($name);
     }
 
-    public function test_overrides_lifecycle(): void
+    public function test_global_curation_sets_lifecycle(): void
     {
-        $this->typesense->upsertOverride(self::COLLECTION, 'promote-tidy', [
-            'rule' => ['query' => 'tidy', 'match' => 'exact'],
-            'includes' => [['id' => '1', 'position' => 1]],
+        $name = 'integration_curation_set';
+        $this->deleteCurationSetQuietly($name);
+
+        $created = $this->client->getCurationSets()->upsert($name, [
+            'items' => [
+                [
+                    'id'       => 'promote-tidy',
+                    'rule'     => ['query' => 'tidy', 'match' => 'exact'],
+                    'includes' => [['id' => '1', 'position' => 1]],
+                ],
+            ],
         ]);
+        $this->assertNotEmpty($created);
 
-        $all = $this->typesense->retrieveOverrides(self::COLLECTION);
-        $this->assertNotEmpty($all['overrides']);
+        $one = $this->client->getCurationSets()[$name]->retrieve();
+        $this->assertNotEmpty($one);
 
-        $one = $this->typesense->retrieveOverride(self::COLLECTION, 'promote-tidy');
-        $this->assertSame('promote-tidy', $one['id']);
+        $this->client->getCurationSets()[$name]->delete();
+        $this->deleteCurationSetQuietly($name);
+    }
 
-        $deleted = $this->typesense->deleteOverride(self::COLLECTION, 'promote-tidy');
-        $this->assertSame('promote-tidy', $deleted['id']);
+    private function deleteSynonymSetQuietly(string $name): void
+    {
+        try {
+            $this->client->getSynonymSets()[$name]->delete();
+        } catch (\Throwable $e) {
+            // not there — nothing to clean up
+        }
+    }
+
+    private function deleteCurationSetQuietly(string $name): void
+    {
+        try {
+            $this->client->getCurationSets()[$name]->delete();
+        } catch (\Throwable $e) {
+            // not there — nothing to clean up
+        }
     }
 
     public function test_aliases_lifecycle(): void
