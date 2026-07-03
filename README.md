@@ -399,50 +399,231 @@ $typesense->deleteNLSearchModel('nl-model-id');
 
 ## Standalone Typesense (without Scout)
 
-Talk to Typesense directly — no Scout model required — via the `TypesenseDirect`
-facade or the `typesense.manager` container binding.
+Talk to Typesense **directly** — no Scout model, no `Searchable` trait — via the
+`TypesenseDirect` facade or the `typesense.manager` container binding. This is
+the right tool when you need full control: hand-built schemas, bulk imports,
+federated `multi_search`, multiple clusters, and the admin APIs (keys, aliases,
+presets, analytics, …) that the Scout driver doesn't surface.
 
-```php
-use TypesenseDirect;
+It runs **alongside** the Scout driver and shares nothing with it at runtime —
+using it never changes how `Model::search()` behaves.
 
-// Create a collection by hand
-TypesenseDirect::ensureCollection([
-    'name' => 'books',
-    'fields' => [
-        ['name' => 'title', 'type' => 'string'],
-        ['name' => 'year',  'type' => 'int32'],
-    ],
-    'default_sorting_field' => 'year',
-]);
+### Setup
 
-// Bulk import
-TypesenseDirect::documents('books')->import([
-    ['id' => '1', 'title' => 'Dune', 'year' => 1965],
-], 'upsert');
-
-// Search & federated multi-search
-$hits  = TypesenseDirect::search('books', ['q' => 'dune', 'query_by' => 'title']);
-$multi = TypesenseDirect::multiSearch([
-    ['collection' => 'books', 'q' => 'dune', 'query_by' => 'title'],
-]);
-
-// A second cluster (named connection defined in config/typesense.php)
-TypesenseDirect::connection('analytics')->search('events', [...]);
-
-// Raw client escape hatch
-$client = TypesenseDirect::connection()->client();
-```
-
-Publish the config to define additional connections:
+Nothing is required to get started: the `default` connection inherits
+`scout.typesense.client-settings`, so any app already using the Scout driver has
+standalone access immediately. Publish the config only when you want to define
+extra connections or override values:
 
 ```bash
 php artisan vendor:publish --tag=typesense-config
 ```
 
-The `default` connection falls back to `scout.typesense.client-settings` for
-any value left unset, so existing Scout-based apps get standalone access with
-no extra configuration. Named connections (e.g. a second cluster) must be
-fully specified in `config/typesense.php`.
+```php
+// config/typesense.php
+return [
+    'default' => env('TYPESENSE_CONNECTION', 'default'),
+
+    'connections' => [
+        // Inherits scout.typesense.client-settings for anything left null.
+        'default' => [
+            'api_key'      => env('TYPESENSE_API_KEY'),
+            'nodes'        => [ /* host/port/protocol … */ ],
+            'nearest_node' => null,
+            // timeouts/retries default to null -> inherit scout settings
+        ],
+
+        // A second, fully-specified cluster.
+        'analytics' => [
+            'api_key' => env('TYPESENSE_ANALYTICS_KEY'),
+            'nodes'   => [
+                ['host' => 'analytics.example.com', 'port' => '443', 'protocol' => 'https'],
+            ],
+        ],
+    ],
+];
+```
+
+> The Scout fallback applies **only** to the `default` connection. Named
+> connections (like `analytics` above) must be fully specified.
+
+### Three ways to reach it
+
+```php
+use Siberfx\Typesense\Standalone\TypesenseManager;
+
+// 1. Facade — proxies to the default connection
+TypesenseDirect::search('books', ['q' => 'dune', 'query_by' => 'title']);
+
+// 2. A specific named connection
+TypesenseDirect::connection('analytics')->search('events', ['q' => '*']);
+
+// 3. Container / dependency injection
+$ts = app('typesense.manager');           // or: app(TypesenseManager::class)
+$ts->connection()->listCollections();
+```
+
+### Collections
+
+```php
+$connection = TypesenseDirect::connection();      // default connection
+
+// Create a collection by hand
+$connection->createCollection([
+    'name'   => 'books',
+    'fields' => [
+        ['name' => 'title',  'type' => 'string'],
+        ['name' => 'author', 'type' => 'string', 'facet' => true],
+        ['name' => 'year',   'type' => 'int32',  'sort'  => true],
+    ],
+    'default_sorting_field' => 'year',
+]);
+
+// Create only if missing (retrieve-or-create)
+$connection->ensureCollection([ 'name' => 'books', 'fields' => [/* … */] ]);
+
+$connection->hasCollection('books');              // bool
+$connection->retrieveCollection('books');         // schema + stats
+$connection->listCollections();                   // all collections
+
+// Add a field (alter)
+$connection->alterCollection('books', [
+    'fields' => [['name' => 'in_stock', 'type' => 'bool']],
+]);
+
+$connection->dropCollection('books');             // delete the collection
+```
+
+### Documents
+
+`documents(string $collection)` returns a small helper bound to one collection:
+
+```php
+$docs = TypesenseDirect::documents('books');
+
+$docs->create(['id' => '1', 'title' => 'Dune', 'year' => 1965]);
+$docs->upsert(['id' => '1', 'title' => 'Dune', 'year' => 1965]); // create or replace
+$docs->update(['id' => '1', 'year' => 1966]);                    // partial update
+$docs->retrieve('1');                                            // single document
+$docs->delete('1');                                              // by id
+
+// Bulk import — array of docs OR a JSONL string.
+// $action: 'create' | 'upsert' | 'update' | 'emplace'
+$results = $docs->import([
+    ['id' => '1', 'title' => 'Dune',        'year' => 1965],
+    ['id' => '2', 'title' => 'Neuromancer', 'year' => 1984],
+], 'upsert');
+
+// Delete many by filter
+$docs->deleteByFilter(['filter_by' => 'year:<1950']);
+
+// Export the whole collection as a JSONL string
+$jsonl = $docs->export();
+```
+
+### Searching
+
+```php
+// Single search
+$hits = TypesenseDirect::search('books', [
+    'q'         => 'dune',
+    'query_by'  => 'title',
+    'filter_by' => 'year:>1900',
+    'sort_by'   => 'year:desc',
+    'per_page'  => 20,
+]);
+echo $hits['found'];                 // hit count
+$hits['hits'][0]['document'];        // the matched document
+
+// Federated multi-search — pass the list of searches; the second arg holds
+// parameters common to all of them. Results come back under $res['results'].
+$res = TypesenseDirect::multiSearch(
+    [
+        ['collection' => 'books',   'q' => 'dune',   'query_by' => 'title'],
+        ['collection' => 'authors', 'q' => 'herbert','query_by' => 'name'],
+    ],
+    ['per_page' => 5] // common params
+);
+$res['results'][0]['hits'];
+```
+
+### Scoped search API keys
+
+Generate a scoped key that embeds search parameters (e.g. a tenant `filter_by`
+and/or an `expires_at`). Computed locally via HMAC — no API call:
+
+```php
+$scoped = TypesenseDirect::generateScopedSearchKey($parentSearchKey, [
+    'filter_by'  => 'company_id:42',
+    'expires_at' => now()->addDay()->timestamp,
+]);
+```
+
+### Admin resources
+
+These accessors return the **native** `typesense-php` resource objects, so the
+full underlying API is available:
+
+```php
+$c = TypesenseDirect::connection();
+
+// API keys
+$c->keys()->create(['description' => 'search-only', 'actions' => ['documents:search'], 'collections' => ['*']]);
+
+// Collection aliases
+$c->aliases()->upsert('books', ['collection_name' => 'books_v2']);
+
+// Search presets
+$c->presets()->upsert('popular', ['value' => ['query_by' => 'title', 'sort_by' => '_text_match:desc']]);
+
+// Stopwords (note: this resource uses put/get/getAll/delete)
+$c->stopwords()->put(['name' => 'stw_en', 'stopwords' => ['a', 'the'], 'locale' => 'en']);
+
+// Stemming dictionaries
+$c->stemming()->dictionaries()->upsert('irregulars', [['word' => 'people', 'root' => 'person']]);
+
+// Analytics rules
+$c->analytics()->rules()->upsert('popular_queries', ['type' => 'popular_queries', 'params' => [/* … */]]);
+
+// Conversation (RAG) & natural-language search models
+$c->conversations()->getModels()->retrieve();
+$c->nlSearchModels()->retrieve();
+
+// Cluster ops
+$c->health()->retrieve();
+$c->metrics()->retrieve();
+$c->operations();
+$c->debug();
+```
+
+### Raw client escape hatch
+
+For anything not wrapped (e.g. per-collection synonyms/overrides), reach the
+underlying `\Typesense\Client` directly:
+
+```php
+$client = TypesenseDirect::connection()->client();
+
+$client->getCollections()['books']->getSynonyms()->upsert('coat-synonyms', [
+    'synonyms' => ['blazer', 'coat', 'jacket'],
+]);
+```
+
+### API summary
+
+| Area | Methods on `TypesenseDirect::connection()` |
+|------|--------------------------------------------|
+| Collections | `createCollection`, `ensureCollection`, `hasCollection`, `retrieveCollection`, `alterCollection`, `dropCollection`, `listCollections` |
+| Documents (`documents($c)->`) | `create`, `upsert`, `update`, `retrieve`, `delete`, `deleteByFilter`, `import`, `export` |
+| Search | `search`, `multiSearch` |
+| Keys | `keys`, `generateScopedSearchKey` |
+| Admin | `aliases`, `presets`, `stopwords`, `stemming`, `analytics`, `conversations`, `nlSearchModels` |
+| Ops | `health`, `metrics`, `debug`, `operations` |
+| Escape hatch | `client()` |
+
+> **Version note:** this standalone client targets `typesense/typesense-php ^5`
+> (server v29+). Global synonym sets, global curation sets, and the analytics
+> v1/v2 split are part of the planned v6 upgrade and are not exposed yet.
 
 ## Migrating from siberfx/laravel-typesense
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
