@@ -21,6 +21,7 @@ This package makes it easy to add full text search support to your models with L
 
 - [Installation](#installation)
 - [Usage](#usage)
+- [Standalone Typesense (without Scout)](#standalone-typesense-without-scout)
 - [Migrating from siberfx/typesense-scout](#migrating-from-siberfx-typesense)
 - [Authors](#authors)
 - [License](#license)
@@ -395,6 +396,53 @@ $typesense->retrieveNLSearchModel('nl-model-id');
 $typesense->updateNLSearchModel('nl-model-id', [/* ... */]);
 $typesense->deleteNLSearchModel('nl-model-id');
 ```
+
+## Standalone Typesense (without Scout)
+
+Talk to Typesense directly — no Scout model required — via the `TypesenseDirect`
+facade or the `typesense.manager` container binding.
+
+```php
+use TypesenseDirect;
+
+// Create a collection by hand
+TypesenseDirect::ensureCollection([
+    'name' => 'books',
+    'fields' => [
+        ['name' => 'title', 'type' => 'string'],
+        ['name' => 'year',  'type' => 'int32'],
+    ],
+    'default_sorting_field' => 'year',
+]);
+
+// Bulk import
+TypesenseDirect::documents('books')->import([
+    ['id' => '1', 'title' => 'Dune', 'year' => 1965],
+], 'upsert');
+
+// Search & federated multi-search
+$hits  = TypesenseDirect::search('books', ['q' => 'dune', 'query_by' => 'title']);
+$multi = TypesenseDirect::multiSearch([
+    ['collection' => 'books', 'q' => 'dune', 'query_by' => 'title'],
+]);
+
+// A second cluster (named connection defined in config/typesense.php)
+TypesenseDirect::connection('analytics')->search('events', [...]);
+
+// Raw client escape hatch
+$client = TypesenseDirect::connection()->client();
+```
+
+Publish the config to define additional connections:
+
+```bash
+php artisan vendor:publish --tag=typesense-config
+```
+
+The `default` connection falls back to `scout.typesense.client-settings` for
+any value left unset, so existing Scout-based apps get standalone access with
+no extra configuration. Named connections (e.g. a second cluster) must be
+fully specified in `config/typesense.php`.
 
 ## Migrating from siberfx/laravel-typesense
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`

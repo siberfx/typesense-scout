@@ -42,6 +42,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   overrides, aliases, presets, stopwords) against a live Typesense server, and
   skips automatically when none is reachable (configurable via `TYPESENSE_*`
   environment variables).
+- Standalone Typesense subsystem (no Scout): `TypesenseManager`, `TypesenseConnection`,
+  `DocumentActions`, `TypesenseConnectionFactory`, and the `TypesenseDirect` facade.
+  Named multi-connection support via a new publishable `config/typesense.php`; the
+  `default` connection inherits `scout.typesense.client-settings`.
 
 ### Fixed
 - Config mismatch: the published `config/scout.php` now nests Typesense
