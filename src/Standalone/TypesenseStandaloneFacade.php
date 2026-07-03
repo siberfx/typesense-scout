@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Facade;
  * @method static array  search(string $collection, array $params)
  * @method static array  multiSearch(array $searches, array $common = [])
  * @method static string generateScopedSearchKey(string $searchKey, array $parameters)
+ * @method static \Typesense\SynonymSets  synonymSets()
+ * @method static \Typesense\CurationSets curationSets()
+ * @method static \Typesense\AnalyticsV1  analyticsV1()
  *
  * @see \Siberfx\Typesense\Standalone\TypesenseManager
  */

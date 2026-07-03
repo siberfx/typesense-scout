@@ -672,15 +672,43 @@ $client->getCollections()['books']->getSynonyms()->upsert('coat-synonyms', [
 | Documents (`documents($c)->`) | `create`, `upsert`, `update`, `retrieve`, `delete`, `deleteByFilter`, `import`, `export` |
 | Search | `search`, `multiSearch` |
 | Keys | `keys`, `generateScopedSearchKey` |
-| Admin | `aliases`, `presets`, `stopwords`, `stemming`, `analytics`, `conversations`, `nlSearchModels` |
+| Admin | `aliases`, `presets`, `stopwords`, `stemming`, `analytics`, `analyticsV1`, `synonymSets`, `curationSets`, `conversations`, `nlSearchModels` |
 | Ops | `health`, `metrics`, `debug`, `operations` |
 | Escape hatch | `client()` |
 
 > [!NOTE]
-> This standalone client targets `typesense/typesense-php ^5` (server v29+).
-> Global synonym sets, global curation sets, and the analytics v1/v2 split
-> arrive with the planned v6 upgrade and aren't exposed yet — reach for the
-> `client()` escape hatch if you need them today.
+> This standalone client targets `typesense/typesense-php ^6` (server **v30+**).
+> That unlocks the global resources below; on older servers, pin the client to
+> `^5` and use the `client()` escape hatch instead.
+
+### Global synonym & curation sets (v6)
+
+Typesense v30 promotes synonyms and curation to **shareable, top-level
+resources**, reachable directly from the connection:
+
+```php
+$c = TypesenseDirect::connection();
+
+// Global synonym set (link to a collection via its `synonym_sets` field)
+$c->synonymSets()->upsert('clothing', [
+    'items' => [
+        ['id' => 'coats', 'synonyms' => ['blazer', 'coat', 'jacket']],
+    ],
+]);
+
+// Global curation set (link via a collection's `curation_sets` field)
+$c->curationSets()->upsert('promos', [
+    'items' => [[
+        'id'       => 'apple-promo',
+        'rule'     => ['query' => 'apple', 'match' => 'exact'],
+        'includes' => [['id' => '422', 'position' => 1]],
+        'excludes' => [['id' => '287']],
+    ]],
+]);
+
+// Legacy analytics surface (alongside analytics())
+$c->analyticsV1()->rules()->retrieve();
+```
 
 ## Migrating from siberfx/laravel-typesense
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`

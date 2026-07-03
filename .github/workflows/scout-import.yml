@@ -47,7 +47,7 @@ jobs:
       - name: Start Typesense
         uses: jirevwe/typesense-github-action@v1.0.1
         with:
-          typesense-version: '27.1'
+          typesense-version: '30.2'
           typesense-port: 8108
           typesense-api-key: xyz
 
