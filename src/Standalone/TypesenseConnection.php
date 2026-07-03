@@ -4,8 +4,10 @@ namespace Siberfx\Typesense\Standalone;
 
 use Typesense\Aliases;
 use Typesense\Analytics;
+use Typesense\AnalyticsV1;
 use Typesense\Client;
 use Typesense\Conversations;
+use Typesense\CurationSets;
 use Typesense\Debug;
 use Typesense\Exceptions\ObjectNotFound;
 use Typesense\Health;
@@ -16,6 +18,7 @@ use Typesense\Operations;
 use Typesense\Presets;
 use Typesense\Stemming;
 use Typesense\Stopwords;
+use Typesense\SynonymSets;
 
 /**
  * Ergonomic, Scout-independent wrapper over ONE Typesense client. Every method
@@ -151,6 +154,35 @@ class TypesenseConnection
     public function analytics(): Analytics
     {
         return $this->client->getAnalytics();
+    }
+
+    /**
+     * Global synonym sets (Typesense v6 / server 30+). Shareable across
+     * collections via the collection's `synonym_sets` field.
+     */
+    public function synonymSets(): SynonymSets
+    {
+        return $this->client->getSynonymSets();
+    }
+
+    /**
+     * Global curation sets (Typesense v6 / server 30+). Shareable across
+     * collections via the collection's `curation_sets` field.
+     */
+    public function curationSets(): CurationSets
+    {
+        return $this->client->getCurationSets();
+    }
+
+    /**
+     * Legacy (v1) analytics surface, alongside the reworked analytics() in v6.
+     *
+     * Note: the installed typesense-php v6.0.0 client exposes this only as a
+     * public property (no `getAnalyticsV1()` getter, unlike its siblings).
+     */
+    public function analyticsV1(): AnalyticsV1
+    {
+        return $this->client->analyticsV1;
     }
 
     // ---- Cluster ops ---------------------------------------------------
