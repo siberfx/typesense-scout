@@ -46,6 +46,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `DocumentActions`, `TypesenseConnectionFactory`, and the `TypesenseDirect` facade.
   Named multi-connection support via a new publishable `config/typesense.php`; the
   `default` connection inherits `scout.typesense.client-settings`.
+- v6 global resources on the standalone client: `TypesenseDirect::synonymSets()`,
+  `curationSets()`, and `analyticsV1()` (Typesense server 30+).
 
 ### Fixed
 - Config mismatch: the published `config/scout.php` now nests Typesense
@@ -70,6 +72,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Pinned `laravel/scout` to `^11.0` (Scout's latest major, which supports both
   Laravel 12 and 13 — Scout versions are independent of the framework version).
 - README now states support for "Laravel 12 and 13".
+- Upgraded `typesense/typesense-php` to `^6.0`; the package now targets
+  Typesense server **30.x**. CI runs against the `typesense/typesense:30.2`
+  image.
 
 ### Removed
 - Dropped Laravel 10 and 11 support: `illuminate/*` constraints narrowed from

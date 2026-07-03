@@ -18,7 +18,7 @@ jobs:
         # lowest  -> Laravel 12 / scout 11.0 / typesense-php 5.0
         # highest -> Laravel 13 / latest scout / typesense-php 5.x
         dependency-versions: ['lowest', 'highest']
-        typesense-version: ['27.1']
+        typesense-version: ['30.2']
 
     name: PHP ${{ matrix.php }} - deps ${{ matrix.dependency-versions }}
 
