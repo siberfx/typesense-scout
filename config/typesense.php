@@ -39,10 +39,12 @@ return [
                 ],
             ], static fn (array $node): bool => ! empty($node['host']))),
             'nearest_node' => null,
-            'connection_timeout_seconds'   => env('TYPESENSE_CONNECTION_TIMEOUT_SECONDS', 2),
-            'healthcheck_interval_seconds' => env('TYPESENSE_HEALTHCHECK_INTERVAL_SECONDS', 15),
-            'num_retries'                  => env('TYPESENSE_NUM_RETRIES', 3),
-            'retry_interval_seconds'       => env('TYPESENSE_RETRY_INTERVAL_SECONDS', 1),
+            // Left null by default so an unset env genuinely inherits the value
+            // from scout.typesense.client-settings; set the env var to override.
+            'connection_timeout_seconds'   => env('TYPESENSE_CONNECTION_TIMEOUT_SECONDS'),
+            'healthcheck_interval_seconds' => env('TYPESENSE_HEALTHCHECK_INTERVAL_SECONDS'),
+            'num_retries'                  => env('TYPESENSE_NUM_RETRIES'),
+            'retry_interval_seconds'       => env('TYPESENSE_RETRY_INTERVAL_SECONDS'),
         ],
 
     ],
