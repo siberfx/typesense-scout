@@ -67,6 +67,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   honour `TYPESENSE_*` environment variables.
 
 ### Changed
+- Upgraded the dev test toolchain to PHPUnit 13: `phpunit/phpunit` constraint
+  bumped from `^11.5|^12.0` to `^13.0`, and `config.platform.php` pinned to
+  `8.4.1` (PHPUnit 13's minimum PHP, still within the package's `^8.4`).
 - README: documented the full standalone (`TypesenseDirect`) API — collections,
   documents, single & federated search, scoped keys, admin resources, cluster
   ops, and the raw `client()` escape hatch — with a beginner-friendly
