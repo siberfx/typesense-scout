@@ -60,6 +60,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   major release. The admin integration tests now exercise the global resources.
 
 ### Fixed
+- Search parameters with legitimate falsy values are no longer stripped before
+  the request: `enableOverrides(false)` and `setPrioritizeExactMatch(false)`
+  previously vanished from the query (silently reverting to server defaults),
+  and an empty search string (`Model::search('')`, a filter-only search)
+  dropped the required `q` parameter entirely.
+- Per-query engine state (groupBy, facetBy, vector/multi-search options,
+  highlight settings, ...) is now reset after every search. The engine is a
+  long-lived singleton, so options set on one search previously leaked into
+  every subsequent search — including other requests in queue workers and
+  Octane. A stale `searchMulti()` would even turn later searches into
+  multi-searches.
+- `update()` (indexing): decides soft-delete handling per model instead of
+  from the first model of the batch (a mixed batch could be skipped or
+  imported wholesale), skips models whose `toSearchableArray()` is empty
+  (previously imported an empty document and failed), and no-ops on an empty
+  model collection instead of erroring.
+- `mapIds()` and `lazyMap()` now handle grouped (`group_by`) search responses;
+  previously they read the absent `hits` key and returned no ids.
+- `performSearch()`: removed a duplicated code block that issued a redundant
+  collection lookup (an extra HTTP round-trip on every multi-search).
+- `Typesense::setScopedApiKey()` now evicts the cached engine before
+  re-registering it; previously it was a silent no-op once any search had
+  already resolved the engine.
+- `Typesense::deleteDocument()` no longer swallows every exception: network or
+  auth failures now surface instead of returning an empty success (which left
+  the index silently out of sync). Deleting an already-missing document
+  remains a no-op, now via a single HTTP call instead of retrieve-then-delete.
+- `Typesense::upsertDocument()` uses Typesense's native upsert instead of a
+  non-atomic retrieve → delete → create sequence (three HTTP calls, and a
+  failure mid-sequence could lose the document).
 - Config mismatch: the published `config/scout.php` now nests Typesense
   connection settings under `typesense.client-settings`, the key the service
   provider and `Typesense` class actually read. Previously the shipped config

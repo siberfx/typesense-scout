@@ -177,16 +177,33 @@ class TypesenseEngine extends Engine
      */
     public function update($models): void
     {
+        if ($models->isEmpty()) {
+            return;
+        }
+
         $collection = $this->typesense->getCollectionIndex($models->first());
 
-        if ($this->usesSoftDelete($models->first()) && config('scout.soft_delete', false)) {
-            $models->each->pushSoftDeleteMetadata();
+        if ($this->usesSoftDelete($models->first())) {
+            if (config('scout.soft_delete', false)) {
+                $models->each->pushSoftDeleteMetadata();
+            } else {
+                // Trashed models must not be (re-)indexed when soft-deleted
+                // records are excluded from the index; decide per model, not
+                // from the first model of the batch.
+                $models = $models->filter(static fn ($model) => is_null($model->deleted_at))->values();
+            }
         }
 
-        if (!$this->usesSoftDelete($models->first()) || is_null($models->first()?->deleted_at) || config('scout.soft_delete', false)) {
-            $this->typesense->importDocuments($collection, $models->map(fn($m) => $m->toSearchableArray())
-                ->toArray());
+        $documents = $models->map(fn ($m) => $m->toSearchableArray())
+            ->filter(static fn ($document) => !empty($document))
+            ->values()
+            ->toArray();
+
+        if ($documents === []) {
+            return;
         }
+
+        $this->typesense->importDocuments($collection, $documents);
     }
 
     /**
@@ -215,7 +232,11 @@ class TypesenseEngine extends Engine
      */
     public function search(Builder $builder): mixed
     {
-        return $this->performSearch($builder, array_filter($this->buildSearchParams($builder, 1, $builder->limit)));
+        try {
+            return $this->performSearch($builder, $this->filterSearchParams($this->buildSearchParams($builder, 1, $builder->limit)));
+        } finally {
+            $this->resetSearchParameters();
+        }
     }
 
     /**
@@ -230,7 +251,71 @@ class TypesenseEngine extends Engine
      */
     public function paginate(Builder $builder, $perPage, $page): mixed
     {
-        return $this->performSearch($builder, array_filter($this->buildSearchParams($builder, $page, $perPage)));
+        try {
+            return $this->performSearch($builder, $this->filterSearchParams($this->buildSearchParams($builder, $page, $perPage)));
+        } finally {
+            $this->resetSearchParameters();
+        }
+    }
+
+    /**
+     * Drop unset (null/empty-string) parameters before sending the search.
+     *
+     * A bare array_filter() would also strip legitimate falsy values: boolean
+     * options set to false (enable_overrides, prioritize_exact_match, ...)
+     * would silently revert to the server defaults, and an empty `q` (a
+     * filter-only search) would be dropped entirely even though Typesense
+     * requires the parameter.
+     *
+     * @param array $params
+     *
+     * @return array
+     */
+    private function filterSearchParams(array $params): array
+    {
+        return array_filter(
+            $params,
+            static fn ($value, string $key): bool => $key === 'q' || ($value !== null && $value !== ''),
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
+    /**
+     * Restore the per-query fluent options to their defaults.
+     *
+     * The engine is resolved once per container, so options set through the
+     * Builder mixin (groupBy, facetBy, vector queries, multi-search, ...)
+     * would otherwise leak into every subsequent search — including searches
+     * from other requests in long-lived workers (queues, Octane).
+     */
+    private function resetSearchParameters(): void
+    {
+        $this->groupBy = [];
+        $this->groupByLimit = 3;
+        $this->startTag = '<mark>';
+        $this->endTag = '</mark>';
+        $this->limitHits = -1;
+        $this->locationOrderBy = [];
+        $this->facetBy = [];
+        $this->maxFacetValues = 10;
+        $this->useCache = false;
+        $this->cacheTtl = 60;
+        $this->snippetThreshold = 30;
+        $this->exhaustiveSearch = false;
+        $this->prioritizeExactMatch = true;
+        $this->enableOverrides = true;
+        $this->highlightAffixNumTokens = 4;
+        $this->facetQuery = '';
+        $this->infix = 'off';
+        $this->includeFields = [];
+        $this->excludeFields = [];
+        $this->highlightFields = [];
+        $this->highlightFullFields = [];
+        $this->pinnedHits = [];
+        $this->hiddenHits = [];
+        $this->optionsMulti = [];
+        $this->prefix = null;
+        $this->vectorQuery = '';
     }
 
     /**
@@ -373,23 +458,20 @@ class TypesenseEngine extends Engine
      */
     protected function performSearch(Builder $builder, array $options = []): mixed
     {
-        $documents = $this->typesense->getCollectionIndex($builder->model)
-            ->getDocuments();
         if ($builder->callback) {
-            return call_user_func($builder->callback, $documents, $builder->query, $options);
-        }
-        if(!$this->optionsMulti)
-        {
             $documents = $this->typesense->getCollectionIndex($builder->model)
                 ->getDocuments();
-            if ($builder->callback) {
-                return call_user_func($builder->callback, $documents, $builder->query, $options);
-            }
 
-            return $documents->search($options);
-        } else {
-            return $this->typesense->multiSearch(["searches" => $this->optionsMulti], $options);
+            return call_user_func($builder->callback, $documents, $builder->query, $options);
         }
+
+        if ($this->optionsMulti) {
+            return $this->typesense->multiSearch(['searches' => $this->optionsMulti], $options);
+        }
+
+        return $this->typesense->getCollectionIndex($builder->model)
+            ->getDocuments()
+            ->search($options);
     }
 
     /**
@@ -498,9 +580,26 @@ class TypesenseEngine extends Engine
      */
     public function mapIds($results): Collection
     {
-        return collect($results['hits'])
-            ->pluck('document.id')
-            ->values();
+        return collect($this->extractHitIds($results));
+    }
+
+    /**
+     * Extract the matched document ids from a search response, transparently
+     * handling grouped (`group_by`) responses, whose hits live under
+     * `grouped_hits` instead of `hits`.
+     *
+     * @param mixed $results
+     *
+     * @return array
+     */
+    private function extractHitIds($results): array
+    {
+        $grouped = !empty($results['grouped_hits'] ?? null);
+
+        return collect($grouped ? $results['grouped_hits'] : ($results['hits'] ?? []))
+            ->pluck($grouped ? 'hits.0.document.id' : 'document.id')
+            ->values()
+            ->all();
     }
 
     /**
@@ -516,17 +615,7 @@ class TypesenseEngine extends Engine
             return $model->newCollection();
         }
 
-        $hits = isset($results['grouped_hits']) && !empty($results['grouped_hits']) ?
-            $results['grouped_hits'] :
-            $results['hits'];
-        $pluck = isset($results['grouped_hits']) && !empty($results['grouped_hits']) ?
-            'hits.0.document.id' :
-            'document.id';
-
-        $objectIds = collect($hits)
-            ->pluck($pluck)
-            ->values()
-            ->all();
+        $objectIds = $this->extractHitIds($results);
 
         $objectIdPositions = array_flip($objectIds);
 
@@ -579,14 +668,11 @@ class TypesenseEngine extends Engine
      */
     public function lazyMap(Builder $builder, $results, $model): LazyCollection
     {
-        if ((int)($results['found'] ?? 0) === 0) {
+        if ($this->getTotalCount($results) === 0) {
             return LazyCollection::make($model->newCollection());
         }
 
-        $objectIds = collect($results['hits'])
-            ->pluck('document.id')
-            ->values()
-            ->all();
+        $objectIds = $this->extractHitIds($results);
 
         $objectIdPositions = array_flip($objectIds);
 

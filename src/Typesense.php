@@ -60,7 +60,14 @@ class Typesense
         $config['api_key'] = $key;
         $client = new Client($config);
 
-        app()[EngineManager::class]->extend('typesense', static function () use ($client) {
+        $engineManager = app()[EngineManager::class];
+
+        // An already-resolved engine is cached by the manager; without
+        // forgetting it, extend() would never take effect once a search
+        // has run and the scoped key would silently be ignored.
+        $engineManager->forgetDrivers();
+
+        $engineManager->extend('typesense', static function () use ($client) {
             return new TypesenseEngine(new Typesense($client));
         });
         Builder::mixin(app()->make(BuilderMixin::class));
@@ -115,21 +122,8 @@ class Typesense
      */
     public function upsertDocument(Collection $collectionIndex, $array): TypesenseDocumentIndexResponse
     {
-        /**
-         * @var $document Document
-         */
-        $document = $collectionIndex->getDocuments()[$array['id']];
-
-        try {
-            $document->retrieve();
-            $document->delete();
-
-            return new TypesenseDocumentIndexResponse(200, true, null, $collectionIndex->getDocuments()
-                                                                                       ->create($array));
-        } catch (ObjectNotFound) {
-            return new TypesenseDocumentIndexResponse(200, true, null, $collectionIndex->getDocuments()
-                                                                                       ->create($array));
-        }
+        return new TypesenseDocumentIndexResponse(200, true, null, $collectionIndex->getDocuments()
+                                                                                   ->upsert($array));
     }
 
     /**
@@ -150,10 +144,11 @@ class Typesense
         $document = $collectionIndex->getDocuments()[(string) $modelId];
 
         try {
-            $document->retrieve();
-
             return $document->delete();
-        } catch (\Exception $exception) {
+        } catch (ObjectNotFound) {
+            // Deleting a document that is already gone is a no-op; any other
+            // failure (network, auth, ...) must surface instead of leaving
+            // the index silently out of sync.
             return [];
         }
     }
