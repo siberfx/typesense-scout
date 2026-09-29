@@ -41,7 +41,7 @@
     },
     "require": {
         "php": "^8.4",
-        "laravel/scout": "^11.0",
+        "laravel/scout": "^11.7",
         "illuminate/bus": "^12.0|^13.0",
         "illuminate/contracts": "^12.0|^13.0",
         "illuminate/database": "^12.0|^13.0",
@@ -65,6 +65,7 @@
         }
     },
     "suggest": {
-        "typesense/typesense-php": "Required to use the Typesense php client."
+        "typesense/typesense-php": "Required to use the Typesense php client.",
+        "laravel/ai": "Required to generate embeddings for semantic() / hybrid() searches (embedding driver laravel-ai)."
     }
 }

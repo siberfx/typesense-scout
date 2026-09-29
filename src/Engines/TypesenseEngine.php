@@ -10,7 +10,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Str;
 use Laravel\Scout\Builder;
+use Laravel\Scout\Contracts\SupportsSemanticSearch;
 use Laravel\Scout\Engines\Engine;
+use Laravel\Scout\Exceptions\ScoutException;
 use Illuminate\Support\Facades\Config;
 use Typesense\Exceptions\ObjectAlreadyExists;
 use Typesense\Exceptions\ObjectNotFound;
@@ -27,7 +29,7 @@ use Typesense\Exceptions\TypesenseClientError;
  *
  * @author  Selim Görmüş <info@siberfx.com>
  */
-class TypesenseEngine extends Engine
+class TypesenseEngine extends Engine implements SupportsSemanticSearch
 {
     /**
      * @var Typesense
@@ -165,13 +167,22 @@ class TypesenseEngine extends Engine
     private string $vectorQuery = '';
 
     /**
+     * The `scout.typesense` configuration (used for `model-settings`).
+     *
+     * @var array
+     */
+    private array $config = [];
+
+    /**
      * TypesenseEngine constructor.
      *
      * @param Typesense $typesense
+     * @param array $config The `scout.typesense` configuration.
      */
-    public function __construct(Typesense $typesense)
+    public function __construct(Typesense $typesense, array $config = [])
     {
         $this->typesense = $typesense;
+        $this->config = $config;
     }
 
     /**
@@ -201,16 +212,80 @@ class TypesenseEngine extends Engine
             }
         }
 
-        $documents = $models->map(fn ($m) => $m->toSearchableArray())
-            ->filter(static fn ($document) => !empty($document))
+        $records = $models->map(static fn ($model) => ['model' => $model, 'document' => $model->toSearchableArray()])
+            ->filter(static fn (array $record) => !empty($record['document']))
             ->values()
-            ->toArray();
+            ->all();
 
-        if ($documents === []) {
+        if ($records === []) {
             return;
         }
 
+        $settings = $this->hasEmbeddingSettings($models->first())
+            ? $this->embeddingSettings($models->first())
+            : null;
+
+        $documents = $settings !== null && !$this->usesNativeEmbeddings($settings)
+            ? $this->addEmbeddingsToDocuments($records, $settings)
+            : array_column($records, 'document');
+
         $this->typesense->importDocuments($collection, $documents);
+    }
+
+    /**
+     * Add generated (or precomputed) embeddings to the documents being indexed.
+     *
+     * Each model's toSearchableEmbedding() returns either the text to embed,
+     * which is sent to the Laravel AI SDK in batches of 100, or a ready-made
+     * embedding array, which is used as-is.
+     *
+     * @param array $records List of ['model' => Model, 'document' => array].
+     * @param array $settings Validated embedding settings.
+     *
+     * @return array
+     */
+    protected function addEmbeddingsToDocuments(array $records, array $settings): array
+    {
+        $documents = [];
+
+        foreach (array_chunk($records, 100) as $batch) {
+            $inputs = [];
+            $vectors = [];
+
+            foreach ($batch as $index => $record) {
+                if (!method_exists($record['model'], 'toSearchableEmbedding')) {
+                    throw new ScoutException('Searchable models using generated embeddings must define a [toSearchableEmbedding] method.');
+                }
+
+                $input = $record['model']->toSearchableEmbedding();
+
+                if (is_array($input)) {
+                    $vectors[$index] = $input;
+
+                    continue;
+                }
+
+                if (!is_string($input) || trim($input) === '') {
+                    throw new ScoutException('The [toSearchableEmbedding] method must return a non-empty string or an embedding array.');
+                }
+
+                $inputs[$index] = $input;
+            }
+
+            if ($inputs !== []) {
+                $generated = $this->generateEmbeddings(array_values($inputs), $settings);
+
+                foreach (array_keys($inputs) as $position => $index) {
+                    $vectors[$index] = $generated[$position];
+                }
+            }
+
+            foreach ($batch as $index => $record) {
+                $documents[] = array_merge($record['document'], [$settings['attribute'] => $vectors[$index]]);
+            }
+        }
+
+        return $documents;
     }
 
     /**
@@ -415,7 +490,298 @@ class TypesenseEngine extends Engine
             $params['vector_query'] = $this->vectorQuery;
         }
 
+        return $this->applySemanticSearchParams($builder, $params);
+    }
+
+    /**
+     * Apply Scout's semantic() / hybrid() builder state to the search params.
+     *
+     * @param \Laravel\Scout\Builder $builder
+     * @param array $params
+     *
+     * @return array
+     */
+    private function applySemanticSearchParams(Builder $builder, array $params): array
+    {
+        if (!$builder->semanticSearch && $builder->hybridSearch === null) {
+            return $params;
+        }
+
+        if ($this->vectorQuery !== '') {
+            throw new ScoutException('Typesense semantic and hybrid searches cannot be combined with vectorQuery() or nearestNeighbors().');
+        }
+
+        $settings = $this->embeddingSettings($builder->model);
+
+        if ($builder->semanticSearch) {
+            $params = $this->usesNativeEmbeddings($settings)
+                ? $this->applyNativeSemanticQueryBy($params, $settings['attribute'])
+                : array_merge($params, ['q' => '*']);
+        } else {
+            $params = $this->applyHybridQueryBy($params, $settings);
+        }
+
+        if (($vectorQuery = $this->buildSemanticVectorQuery($builder, $settings)) !== null) {
+            $params['vector_query'] = $vectorQuery;
+        }
+
+        // Never ship the (large) embedding back with every hit.
+        $params['exclude_fields'] = $this->appendField($params['exclude_fields'] ?? '', $settings['attribute']);
+
         return $params;
+    }
+
+    /**
+     * Point a native-embedding semantic search at the embedding field only.
+     *
+     * @param array $params
+     * @param string $attribute
+     *
+     * @return array
+     */
+    private function applyNativeSemanticQueryBy(array $params, string $attribute): array
+    {
+        $params['query_by'] = $attribute;
+
+        // Remote embedders reject prefix searches on embedding fields.
+        $params['prefix'] = false;
+
+        // Per-field lists no longer line up with the single query_by field.
+        if (isset($params['infix']) && str_contains((string) $params['infix'], ',')) {
+            unset($params['infix']);
+        }
+
+        return $params;
+    }
+
+    /**
+     * Prepare query_by (and its per-field params) for a hybrid search.
+     *
+     * @param array $params
+     * @param array $settings
+     *
+     * @return array
+     */
+    private function applyHybridQueryBy(array $params, array $settings): array
+    {
+        $fields = array_filter(array_map('trim', explode(',', (string) ($params['query_by'] ?? ''))));
+
+        if (array_diff($fields, [$settings['attribute']]) === []) {
+            throw new ScoutException('Typesense hybrid searches require at least one keyword field in the [query_by] search parameter.');
+        }
+
+        if (!$this->usesNativeEmbeddings($settings) || in_array($settings['attribute'], $fields, true)) {
+            return $params;
+        }
+
+        $params['query_by'] = implode(',', [...$fields, $settings['attribute']]);
+
+        if (isset($params['infix']) && str_contains((string) $params['infix'], ',')) {
+            $params['infix'] .= ',off';
+        }
+
+        // Prefix search defaults to true, which remote embedders reject on the
+        // embedding field, so it has to become a per-field list.
+        $prefix = $params['prefix'] ?? true;
+
+        if (is_string($prefix) && str_contains($prefix, ',')) {
+            $params['prefix'] = $prefix . ',false';
+        } elseif ($prefix === true || $prefix === 'true') {
+            $params['prefix'] = implode(',', [...array_fill(0, count($fields), 'true'), 'false']);
+        }
+
+        return $params;
+    }
+
+    /**
+     * Build the vector_query for a semantic / hybrid search.
+     *
+     * @param \Laravel\Scout\Builder $builder
+     * @param array $settings
+     *
+     * @return string|null
+     */
+    private function buildSemanticVectorQuery(Builder $builder, array $settings): ?string
+    {
+        if ($this->usesNativeEmbeddings($settings)) {
+            $vector = [];
+        } else {
+            $vector = $builder->options['vector'] ?? $this->generateEmbeddings([$builder->query], $settings)[0];
+
+            if (!is_array($vector) || $vector === []) {
+                throw new ScoutException('The Typesense query [vector] must be a non-empty embedding array.');
+            }
+        }
+
+        $options = [];
+
+        if ($builder->hybridSearch !== null) {
+            $options[] = 'alpha: ' . ($builder->hybridSearch['semantic_weight'] / array_sum($builder->hybridSearch));
+        }
+
+        if ($builder->minimumSimilarity !== null) {
+            $options[] = 'distance_threshold: ' . $this->distanceThreshold($builder->minimumSimilarity);
+        }
+
+        if ($vector === [] && $options === []) {
+            return null;
+        }
+
+        return sprintf(
+            '%s:([%s]%s)',
+            $settings['attribute'],
+            implode(', ', $vector),
+            $options === [] ? '' : ', ' . implode(', ', $options)
+        );
+    }
+
+    /**
+     * Convert a minimum cosine similarity (0..1) into a max vector distance.
+     *
+     * @param mixed $similarity
+     *
+     * @return float
+     */
+    private function distanceThreshold(mixed $similarity): float
+    {
+        if (!is_numeric($similarity) || $similarity < 0 || $similarity > 1) {
+            throw new ScoutException('The minimum similarity must be between 0 and 1.');
+        }
+
+        return 1 - $similarity;
+    }
+
+    /**
+     * Append a field to a comma-separated field list unless already present.
+     *
+     * @param string $fields
+     * @param string $field
+     *
+     * @return string
+     */
+    private function appendField(string $fields, string $field): string
+    {
+        $fields = array_filter(array_map('trim', explode(',', $fields)));
+
+        if (!in_array($field, $fields, true)) {
+            $fields[] = $field;
+        }
+
+        return implode(',', $fields);
+    }
+
+    /**
+     * Get the raw embedding settings for a model.
+     *
+     * A model-level typesenseEmbeddingSettings() method takes precedence over
+     * `scout.typesense.model-settings.{Model}.embedding` (Scout's format).
+     *
+     * @param mixed $model
+     *
+     * @return mixed
+     */
+    private function rawEmbeddingSettings($model): mixed
+    {
+        if (method_exists($model, 'typesenseEmbeddingSettings')
+            && ($settings = $model->typesenseEmbeddingSettings()) !== null) {
+            return $settings;
+        }
+
+        return $this->config['model-settings'][get_class($model)]['embedding'] ?? null;
+    }
+
+    /**
+     * @param mixed $model
+     *
+     * @return bool
+     */
+    private function hasEmbeddingSettings($model): bool
+    {
+        return !empty($this->rawEmbeddingSettings($model));
+    }
+
+    /**
+     * Get the validated embedding settings for a model.
+     *
+     * @param mixed $model
+     *
+     * @return array
+     */
+    protected function embeddingSettings($model): array
+    {
+        $settings = $this->rawEmbeddingSettings($model);
+
+        if (!is_array($settings) || $settings === []) {
+            throw new ScoutException('No Typesense embedding settings have been configured for [' . get_class($model) . '].');
+        }
+
+        if (!isset($settings['attribute']) || !is_string($settings['attribute']) || trim($settings['attribute']) === '') {
+            throw new ScoutException('Typesense embedding settings must contain an [attribute].');
+        }
+
+        $driver = $settings['driver'] ?? 'laravel-ai';
+
+        if (!in_array($driver, ['laravel-ai', 'typesense'], true)) {
+            throw new ScoutException("The [{$driver}] Typesense embedding driver is not supported.");
+        }
+
+        $settings['driver'] = $driver;
+
+        if ($this->usesNativeEmbeddings($settings)) {
+            return $settings;
+        }
+
+        if (!isset($settings['dimensions'])
+            || filter_var($settings['dimensions'], FILTER_VALIDATE_INT) === false
+            || $settings['dimensions'] < 1) {
+            throw new ScoutException('Typesense embedding settings must contain positive [dimensions].');
+        }
+
+        $settings['dimensions'] = (int) $settings['dimensions'];
+
+        return $settings;
+    }
+
+    /**
+     * Whether Typesense generates the embeddings itself (an `embed` field).
+     *
+     * @param array $settings
+     *
+     * @return bool
+     */
+    private function usesNativeEmbeddings(array $settings): bool
+    {
+        return ($settings['driver'] ?? null) === 'typesense';
+    }
+
+    /**
+     * Generate embeddings through the optional Laravel AI SDK (laravel/ai).
+     *
+     * @param array $inputs
+     * @param array $settings
+     *
+     * @return array
+     */
+    protected function generateEmbeddings(array $inputs, array $settings): array
+    {
+        $embeddingsClass = 'Laravel\\Ai\\Embeddings';
+
+        if (!class_exists($embeddingsClass)) {
+            throw new ScoutException('Semantic search requires the Laravel AI SDK. Please install the [laravel/ai] package.');
+        }
+
+        $response = $embeddingsClass::for(array_values($inputs))
+            ->dimensions($settings['dimensions'])
+            ->cache()
+            ->generate($settings['provider'] ?? null, $settings['model'] ?? null);
+
+        $embeddings = $response->embeddings;
+
+        if (!is_array($embeddings) || count($embeddings) !== count($inputs)) {
+            throw new ScoutException('Laravel AI returned an unexpected number of embeddings.');
+        }
+
+        return $embeddings;
     }
 
     /**
