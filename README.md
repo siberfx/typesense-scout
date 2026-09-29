@@ -1,6 +1,12 @@
 # Laravel Scout Typesense Driver 
 
-This package makes it easy to add full text search support to your models with Laravel 12 and 13. 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
+[![Total Downloads](https://img.shields.io/packagist/dt/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
+[![Tests](https://img.shields.io/github/actions/workflow/status/siberfx/typesense-scout/pull-request.yml?branch=main&label=tests&style=flat-square)](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml)
+[![PHP Version](https://img.shields.io/badge/php-8.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/supported-versions.php)
+[![License](https://img.shields.io/packagist/l/siberfx/typesense-scout.svg?style=flat-square)](LICENSE)
+
+This package makes it easy to add full text search support to your models with Laravel 12 and 13 on PHP 8.4 and 8.5. 
 
 > [!IMPORTANT] 
 > The features from the Scout driver in this repo have been merged upstream into [Laravel Scout natively](https://laravel.com/docs/11.x/scout#typesense).
@@ -10,12 +16,6 @@ This package makes it easy to add full text search support to your models with L
 > If there are any Typesense-specific features that would be hard to implement in Laravel Scout natively (since we need to maintain consistency with all the other drivers), then at that point we plan to add those features into this driver and maintain it as a "Scout Extended Driver" of sorts. But it's too early to tell if we'd want to do this, so we're in a holding pattern on this repo for now.
 > 
 > In the meantime, we recommend switching to the native Laravel Scout driver and report any issues in the [Laravel Scout repo](https://github.com/laravel/scout).
-
-<!--
-
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout) [![PHP from Packagist](https://img.shields.io/packagist/php-v/siberfx/typesense-scout?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
-
--->
 
 ## Contents
 
