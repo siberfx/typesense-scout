@@ -34,7 +34,6 @@ class TypesenseEngineSearchParamsTest extends TestCase
     private function invokePrivate(TypesenseEngine $engine, string $method, array $args = []): mixed
     {
         $ref = (new ReflectionClass(TypesenseEngine::class))->getMethod($method);
-        $ref->setAccessible(true);
 
         return $ref->invoke($engine, ...$args);
     }
@@ -129,7 +128,6 @@ class TypesenseEngineSearchParamsTest extends TestCase
         // The multi-search option list is cleared too, so the next search is
         // a normal single-collection search again.
         $ref = (new ReflectionClass(TypesenseEngine::class))->getProperty('optionsMulti');
-        $ref->setAccessible(true);
         $this->assertSame([], $ref->getValue($engine));
     }
 }
