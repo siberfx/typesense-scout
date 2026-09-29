@@ -921,18 +921,29 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     protected function filters(Builder $builder): string
     {
+        $escape = (bool) ($this->config['escape_filter_values'] ?? false);
+
+        // Operator arrays such as ['>', 100] are filter syntax, never escaped.
+        $whereValue = fn ($value) => $escape && !is_array($value)
+            ? $this->escapeWhereValue($value)
+            : $this->parseFilterValue($value);
+
+        $listValue = fn (array $values) => $escape
+            ? array_map([$this, 'escapeWhereValue'], $values)
+            : $this->parseFilterValue($values);
+
         $whereFilter = collect($builder->wheres)
-            ->map(fn ($value, $key) => $this->parseWhereFilter($this->parseFilterValue($value), $key))
+            ->map(fn ($value, $key) => $this->parseWhereFilter($whereValue($value), $key))
             ->values()
             ->implode(' && ');
 
         $whereInFilter = collect($builder->whereIns)
-            ->map(fn ($value, $key) => $this->parseWhereInFilter($this->parseFilterValue($value), $key))
+            ->map(fn ($value, $key) => $this->parseWhereInFilter($listValue($value), $key))
             ->values()
             ->implode(' && ');
 
         $whereNotInFilter = collect($builder->whereNotIns)
-            ->map(fn ($value, $key) => $this->parseWhereNotInFilter($this->parseFilterValue($value), $key))
+            ->map(fn ($value, $key) => $this->parseWhereNotInFilter($listValue($value), $key))
             ->values()
             ->implode(' && ');
 
@@ -962,6 +973,40 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
         }
 
         return $value;
+    }
+
+    /**
+     * Escape a value for safe use in a Typesense `filter_by` string.
+     *
+     * Strings are wrapped in backticks (inner backticks escaped), so values
+     * containing `&&`, `||`, `,`, `[`, `]` or `:` cannot alter the filter.
+     * Same behaviour as \Typesense\FilterBy::escape() in typesense-php 6.1.
+     *
+     * @param string|int|float|bool $value
+     *
+     * @return string
+     */
+    public static function escapeFilterValue(string|int|float|bool $value): string
+    {
+        return match (true) {
+            is_string($value) => '`' . str_replace('`', '\\`', $value) . '`',
+            is_bool($value) => $value ? 'true' : 'false',
+            default => (string) $value,
+        };
+    }
+
+    /**
+     * Escape a where/whereIn value when `scout.typesense.escape_filter_values`
+     * is enabled. Numeric strings (typical of request input) stay unquoted so
+     * they keep matching numeric fields.
+     *
+     * @param string|int|float|bool $value
+     *
+     * @return string
+     */
+    private function escapeWhereValue(string|int|float|bool $value): string
+    {
+        return is_string($value) && is_numeric($value) ? $value : static::escapeFilterValue($value);
     }
 
     /**
