@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Scout `semantic()` and `hybrid()` searches (ported from laravel/scout 11.7).
+  The engine now implements `SupportsSemanticSearch`; previously `semantic()`
+  threw `NotSupportedException` and `hybrid()` was silently ignored. Configure
+  embeddings per model in `scout.typesense.model-settings.{Model}.embedding`
+  (or a model `typesenseEmbeddingSettings()` method) with the `typesense`
+  driver (native `embed` fields) or the `laravel-ai` driver (embeddings
+  generated through the optional `laravel/ai` SDK from `toSearchableEmbedding()`).
+- `scout.typesense.escape_filter_values` (opt-in): backtick-escape string values
+  from `where` / `whereIn` / `whereNotIn`, so values containing `&&`, `||`, `,`
+  or `]` cannot alter the filter. `TypesenseEngine::escapeFilterValue()` is
+  public for hand-written filters (equivalent to typesense-php 6.1 `FilterBy::escape()`).
 - Laravel 13 support.
 - `whereNotIn()` support in the search engine — Scout's `whereNotIn` now
   produces a Typesense `field:!=[...]` filter (previously silently ignored).
@@ -60,6 +71,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   major release. The admin integration tests now exercise the global resources.
 
 ### Fixed
+- Vector searches (`nearestNeighbors()` / `vectorQuery()`) are sent in the POST
+  body of a multi-search instead of the GET query string, where a typical
+  768-1536 dimension embedding exceeded Typesense's query string length limit.
+  Multi-search error entries are rethrown as the matching Typesense exception.
 - Search parameters with legitimate falsy values are no longer stripped before
   the request: `enableOverrides(false)` and `setPrioritizeExactMatch(false)`
   previously vanished from the query (silently reverting to server defaults),
@@ -97,6 +112,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   honour `TYPESENSE_*` environment variables.
 
 ### Changed
+- Require `laravel/scout` `^11.7` (for `SupportsSemanticSearch`). `laravel/ai` is
+  suggested for the `laravel-ai` embedding driver.
+- `TypesenseEngine` now receives the `scout.typesense` config as a second
+  (optional) constructor argument.
 - Upgraded the dev test toolchain to PHPUnit 13: `phpunit/phpunit` constraint
   bumped from `^11.5|^12.0` to `^13.0`, and `config.platform.php` pinned to
   `8.4.1` (PHPUnit 13's minimum PHP, still within the package's `^8.4`).

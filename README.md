@@ -286,6 +286,22 @@ Todo::search('shoes')
 
 Boolean values are rendered as Typesense literals (`true`/`false`) automatically.
 
+Filter values are inserted as-is by default. If they can come from user input,
+enable escaping so a value such as `a && b` cannot change the filter:
+
+```php
+// config/scout.php
+'typesense' => [
+    // ...
+    'escape_filter_values' => true,
+],
+```
+
+String values are then wrapped in backticks (`` name:=`a && b` ``); numeric
+strings, numbers, booleans and operator arrays such as `['>', 100]` are left
+unquoted. For hand-written filters use
+`TypesenseEngine::escapeFilterValue($value)`.
+
 ### Vector / Hybrid Search
 
 Search a vector field by nearest neighbours. Use `nearestNeighbors()` to build
@@ -310,6 +326,76 @@ Todo::search('*')
     ->vectorQuery('embedding:([0.12, 0.34, 0.56], k:10, alpha:0.4)')
     ->get();
 ```
+
+Vector searches are sent in the request body (via multi-search), so large
+embeddings don't exceed Typesense's query string length limit.
+
+### Semantic Search with Scout's `semantic()` / `hybrid()`
+
+Scout 11.7+ has `semantic()` and `hybrid()` builder methods, and this engine
+supports them. You pass the search text and the engine builds the vector query:
+
+```php
+Todo::search('things to do before the trip')->semantic()->get();
+Todo::search('things to do before the trip')->semantic(minSimilarity: 0.7)->get();
+
+// Keyword + semantic, weighted 1:2 (Typesense alpha = 2/3).
+Todo::search('trip checklist')->hybrid(textWeight: 1, semanticWeight: 2)->get();
+```
+
+Tell the engine which field holds the embedding. Set this in `config/scout.php`
+(same format as Scout's own Typesense driver):
+
+```php
+'typesense' => [
+    // ...
+    'model-settings' => [
+        App\Models\Todo::class => [
+            'embedding' => [
+                'driver'    => 'typesense', // or 'laravel-ai'
+                'attribute' => 'embedding',
+            ],
+        ],
+    ],
+],
+```
+
+You can also define `typesenseEmbeddingSettings(): ?array` on the model; it
+takes precedence over the config.
+
+**`typesense` driver:** Typesense creates the embeddings itself. Declare an
+auto-embedding field in `getCollectionSchema()`:
+
+```php
+['name' => 'embedding', 'type' => 'float[]', 'embed' => [
+    'from' => ['title', 'description'],
+    'model_config' => ['model_name' => 'ts/all-MiniLM-L12-v2'],
+]],
+```
+
+**`laravel-ai` driver:** embeddings are generated in PHP through the
+[Laravel AI SDK](https://github.com/laravel/ai) (`composer require laravel/ai`).
+Add `'dimensions' => 1536` (plus optional `'provider'` / `'model'`) to the
+settings, declare `['name' => 'embedding', 'type' => 'float[]', 'num_dim' => 1536]`
+in the schema, and tell the model what to embed:
+
+```php
+public function toSearchableEmbedding(): string|array
+{
+    return $this->title . "\n" . $this->description; // or a precomputed vector
+}
+```
+
+The query is embedded the same way. To reuse a vector you already have, pass
+`->options(['vector' => $vector])`.
+
+Semantic and hybrid searches:
+
+- always leave the embedding field out of the returned hits;
+- turn `minSimilarity` (0..1) into `distance_threshold: 1 - minSimilarity`;
+- can't be combined with `nearestNeighbors()` / `vectorQuery()` on the same query.
+
+Hybrid searches need at least one keyword field in `typesenseQueryBy()`.
 
 ### Synonyms, Curation, Aliases & Analytics
 
