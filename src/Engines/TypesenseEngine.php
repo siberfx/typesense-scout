@@ -12,6 +12,13 @@ use Illuminate\Support\Str;
 use Laravel\Scout\Builder;
 use Laravel\Scout\Engines\Engine;
 use Illuminate\Support\Facades\Config;
+use Typesense\Exceptions\ObjectAlreadyExists;
+use Typesense\Exceptions\ObjectNotFound;
+use Typesense\Exceptions\ObjectUnprocessable;
+use Typesense\Exceptions\RequestMalformed;
+use Typesense\Exceptions\RequestUnauthorized;
+use Typesense\Exceptions\ServiceUnavailable;
+use Typesense\Exceptions\TypesenseClientError;
 
 /**
  * Class TypesenseEngine.
@@ -466,12 +473,77 @@ class TypesenseEngine extends Engine
         }
 
         if ($this->optionsMulti) {
-            return $this->typesense->multiSearch(['searches' => $this->optionsMulti], $options);
+            return $this->typesense->multiSearch(...$this->moveVectorQueryIntoSearches($this->optionsMulti, $options));
         }
 
-        return $this->typesense->getCollectionIndex($builder->model)
-            ->getDocuments()
-            ->search($options);
+        $documents = $this->typesense->getCollectionIndex($builder->model)->getDocuments();
+
+        if (!isset($options['vector_query'])) {
+            return $documents->search($options);
+        }
+
+        // A serialized embedding easily exceeds Typesense's query string
+        // length limit on a GET search, so vector queries are sent in the
+        // POST body of a single-entry multi-search instead.
+        $results = $this->typesense->multiSearch([
+            'searches' => [
+                array_merge($options, ['collection' => $builder->model->searchableAs()]),
+            ],
+        ], []);
+
+        $result = $results['results'][0] ?? [];
+
+        if (isset($result['error'])) {
+            throw $this->marshalMultiSearchException($result);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Move a common `vector_query` out of the multi-search query string and
+     * into each search body (unless a search defines its own), for the same
+     * query-string length reason as single vector searches.
+     *
+     * @param array $searches
+     * @param array $commonParams
+     *
+     * @return array{0: array, 1: array}
+     */
+    private function moveVectorQueryIntoSearches(array $searches, array $commonParams): array
+    {
+        if (isset($commonParams['vector_query'])) {
+            $searches = array_map(
+                static fn (array $search): array => $search + ['vector_query' => $commonParams['vector_query']],
+                $searches
+            );
+
+            unset($commonParams['vector_query']);
+        }
+
+        return [['searches' => $searches], $commonParams];
+    }
+
+    /**
+     * Convert a multi-search error entry into the matching Typesense exception.
+     *
+     * @param array $result
+     *
+     * @return \Typesense\Exceptions\TypesenseClientError
+     */
+    private function marshalMultiSearchException(array $result): TypesenseClientError
+    {
+        $exception = match ((int) ($result['code'] ?? 500)) {
+            400 => new RequestMalformed(),
+            401 => new RequestUnauthorized(),
+            404 => new ObjectNotFound(),
+            409 => new ObjectAlreadyExists(),
+            422 => new ObjectUnprocessable(),
+            503 => new ServiceUnavailable(),
+            default => new TypesenseClientError(),
+        };
+
+        return $exception->setMessage((string) $result['error']);
     }
 
     /**
