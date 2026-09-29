@@ -29,7 +29,7 @@ class TypesenseServiceProvider extends ServiceProvider
         $this->app[EngineManager::class]->extend('typesense', static function ($app) {
             $client = new Client(Config::get('scout.typesense.client-settings'));
 
-            return new TypesenseEngine(new Typesense($client));
+            return new TypesenseEngine(new Typesense($client), Config::get('scout.typesense', []));
         });
 
         $this->registerMacros();

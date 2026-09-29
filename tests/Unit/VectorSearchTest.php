@@ -33,7 +33,6 @@ class VectorSearchTest extends TestCase
     private function buildParams(TypesenseEngine $engine, Builder $builder): array
     {
         $method = (new ReflectionClass(TypesenseEngine::class))->getMethod('buildSearchParams');
-        $method->setAccessible(true);
 
         return $method->invoke($engine, $builder, 1, 10);
     }

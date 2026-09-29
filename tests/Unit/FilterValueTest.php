@@ -20,7 +20,6 @@ class FilterValueTest extends TestCase
     private function callFilters(Builder $builder): string
     {
         $method = (new ReflectionClass(TypesenseEngine::class))->getMethod('filters');
-        $method->setAccessible(true);
 
         return $method->invoke($this->engine(), $builder);
     }

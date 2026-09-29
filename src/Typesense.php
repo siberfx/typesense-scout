@@ -68,7 +68,7 @@ class Typesense
         $engineManager->forgetDrivers();
 
         $engineManager->extend('typesense', static function () use ($client) {
-            return new TypesenseEngine(new Typesense($client));
+            return new TypesenseEngine(new Typesense($client), Config::get('scout.typesense', []));
         });
         Builder::mixin(app()->make(BuilderMixin::class));
     }
