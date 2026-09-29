@@ -275,7 +275,9 @@ Todo::search('shoes')
     ->get();
 ```
 
-For comparison and range filters, pass the operator as an array value:
+Scout's operator form works too: `->where('price', '>', 100)` (`=`, `!=`, `<`, `>`, `<=`, `>=`).
+
+For range filters (or any raw Typesense filter syntax), pass an array value:
 
 ```php
 Todo::search('shoes')

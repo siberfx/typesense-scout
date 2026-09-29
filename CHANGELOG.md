@@ -71,6 +71,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   major release. The admin integration tests now exercise the global resources.
 
 ### Fixed
+- `where()` clauses produced invalid filters on Scout 11 (e.g. `0:...`): Scout 11
+  stores them as `[field, operator, value]` entries, which the engine read as
+  `field => value` pairs. Both shapes are now handled, and Scout's operator form
+  `where('price', '>', 100)` (`=`, `!=`, `<`, `>`, `<=`, `>=`) is supported.
 - Vector searches (`nearestNeighbors()` / `vectorQuery()`) are sent in the POST
   body of a multi-search instead of the GET query string, where a typical
   768-1536 dimension embedding exceeded Typesense's query string length limit.

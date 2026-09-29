@@ -75,6 +75,23 @@ class TypesenseEngineFilterTest extends TestCase
         $this->assertSame('', $this->callFilters($this->builder()));
     }
 
+    public function test_filters_from_scout_builder_where_calls(): void
+    {
+        // Scout 11 stores where() clauses as ['field', 'operator', 'value'].
+        $builder = $this->builder()
+            ->where('status', 'active')
+            ->where('price', '>', 100)
+            ->where('stock', '!=', 0)
+            ->where('rating', ['[3..5]'])
+            ->where('featured', true)
+            ->whereIn('type', ['a', 'b']);
+
+        $this->assertSame(
+            'status:=active && price:>100 && stock:!=0 && rating:[3..5] && featured:=true && type:=[a, b]',
+            $this->callFilters($builder)
+        );
+    }
+
     public function test_escape_filter_value_matches_typesense_filter_by_escape(): void
     {
         $this->assertSame('`O\'Conner && a || [b]`', TypesenseEngine::escapeFilterValue("O'Conner && a || [b]"));

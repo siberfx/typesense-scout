@@ -932,8 +932,12 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             ? array_map([$this, 'escapeWhereValue'], $values)
             : $this->parseFilterValue($values);
 
+        // Scout 11 stores where() clauses as ['field', 'operator', 'value']
+        // entries; plain `field => value` pairs are still accepted.
         $whereFilter = collect($builder->wheres)
-            ->map(fn ($value, $key) => $this->parseWhereFilter($whereValue($value), $key))
+            ->map(fn ($where, $key) => is_array($where) && array_key_exists('field', $where) && array_key_exists('value', $where)
+                ? $this->parseWhereFilter($whereValue($where['value']), $where['field'], $where['operator'] ?? '=')
+                : $this->parseWhereFilter($whereValue($where), $key))
             ->values()
             ->implode(' && ');
 
@@ -1015,19 +1019,30 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      * Passing an array enables comparison/range operators, e.g.
      * where('price', ['>', 100]) => "price:>100" and
      * where('price', ['[10..100]']) => "price:[10..100]".
+     * Scout's own operator form works too: where('price', '>', 100).
      *
      * @param array|string $value
      * @param string $key
+     * @param string $operator One of =, !=, <, >, <=, >=.
      *
      * @return string
      */
-    public function parseWhereFilter(array|string $value, string $key): string
+    public function parseWhereFilter(array|string $value, string $key, string $operator = '='): string
     {
         if (is_array($value)) {
             return sprintf('%s:%s', $key, implode('', $value));
         }
 
-        return sprintf('%s:=%s', $key, $value);
+        $operator = match ($operator) {
+            '!=', '<>' => ':!=',
+            '<' => ':<',
+            '>' => ':>',
+            '<=' => ':<=',
+            '>=' => ':>=',
+            default => ':=',
+        };
+
+        return sprintf('%s%s%s', $key, $operator, $value);
     }
 
     /**
