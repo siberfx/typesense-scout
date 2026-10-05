@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-05
+
+### Fixed
+- README Tests badge showed "no status" after successful runs: GitHub's workflow
+  badge reports no status whenever a `branch=` filter is set. It now filters by
+  `event=push` (tests only run on pushes to `main`, so the result is the same).
+
 ## [1.7.0] - 2026-10-05
 
 ### Security
@@ -24,9 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Dev dependencies: `phpunit/phpunit` `^13.4`, `vlucas/phpdotenv` `^5.7`,
   `php-http/guzzle7-adapter` `^1.1`. `composer audit` reports no advisories for
   either the lowest or the highest dependency set.
-- README: the Tests badge now uses GitHub's native workflow badge filtered by
-  `event=push` (a `branch=main` filter makes the badge report "no status" even
-  after successful runs); added a Laravel badge,
+- README: the Tests badge now uses GitHub's native workflow badge; added a Laravel badge,
   a Requirements table and a Changelog section; replaced the upstream
   "development paused" notice with a description of this package; fixed the
   Migrating anchor, the License link and the Authors section; refreshed the
@@ -192,6 +197,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
 
-[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.7.0...HEAD
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.7.1...HEAD
+[1.7.1]: https://github.com/siberfx/typesense-scout/compare/1.7.0...1.7.1
 [1.7.0]: https://github.com/siberfx/typesense-scout/compare/1.6.1...1.7.0
 [1.6.1]: https://github.com/siberfx/typesense-scout/compare/1.5.0...1.6.1
