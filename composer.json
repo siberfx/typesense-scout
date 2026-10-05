@@ -3,11 +3,13 @@
     "description": "Laravel Scout Driver for Typesense",
     "keywords": [
         "laravel",
+        "scout",
         "typesense",
-        "search"
+        "search",
+        "vector-search"
     ],
     "type": "library",
-    "homepage": "https://typesense.org",
+    "homepage": "https://github.com/siberfx/typesense-scout",
     "license": "MIT",
     "authors": [
         {
@@ -41,31 +43,29 @@
     },
     "require": {
         "php": "^8.4",
-        "laravel/scout": "^11.7",
-        "illuminate/bus": "^12.0|^13.0",
-        "illuminate/contracts": "^12.0|^13.0",
-        "illuminate/database": "^12.0|^13.0",
-        "illuminate/pagination": "^12.0|^13.0",
-        "illuminate/queue": "^12.0|^13.0",
-        "illuminate/support": "^12.0|^13.0",
+        "laravel/scout": "^11.8",
+        "illuminate/bus": "^12.69|^13.30",
+        "illuminate/contracts": "^12.69|^13.30",
+        "illuminate/database": "^12.69|^13.30",
+        "illuminate/pagination": "^12.69|^13.30",
+        "illuminate/queue": "^12.69|^13.30",
+        "illuminate/support": "^12.69|^13.30",
         "typesense/typesense-php": "^6.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^13.0",
-        "vlucas/phpdotenv": "^5.6",
-        "php-http/guzzle7-adapter": "^1.0"
+        "phpunit/phpunit": "^13.4",
+        "vlucas/phpdotenv": "^5.7",
+        "php-http/guzzle7-adapter": "^1.1"
     },
     "config": {
         "platform": {
             "php": "8.4.1"
         },
         "allow-plugins": {
-            "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
     },
     "suggest": {
-        "typesense/typesense-php": "Required to use the Typesense php client.",
         "laravel/ai": "Required to generate embeddings for semantic() / hybrid() searches (embedding driver laravel-ai)."
     }
 }

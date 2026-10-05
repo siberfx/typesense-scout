@@ -1,37 +1,48 @@
-# Laravel Scout Typesense Driver 
+# Laravel Scout Typesense Driver
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
 [![Total Downloads](https://img.shields.io/packagist/dt/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
-[![Tests](https://img.shields.io/github/actions/workflow/status/siberfx/typesense-scout/pull-request.yml?branch=main&label=tests&style=flat-square)](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml)
+[![Tests](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml/badge.svg?branch=main)](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml?query=branch%3Amain)
 [![PHP Version](https://img.shields.io/badge/php-8.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/supported-versions.php)
+[![Laravel](https://img.shields.io/badge/laravel-12.69%2B%20%7C%2013.30%2B-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com/docs/13.x/releases)
 [![License](https://img.shields.io/packagist/l/siberfx/typesense-scout.svg?style=flat-square)](LICENSE)
 
-This package makes it easy to add full text search support to your models with Laravel 12 and 13 on PHP 8.4 and 8.5. 
+This package makes it easy to add full text search support to your models with Laravel 12 and 13 on PHP 8.4 and 8.5.
+On top of the Scout driver it ships Typesense-specific extras — vector / hybrid / semantic search, scoped search keys,
+admin API wrappers — and a standalone `TypesenseDirect` client for talking to Typesense without Scout.
 
-> [!IMPORTANT] 
-> The features from the Scout driver in this repo have been merged upstream into [Laravel Scout natively](https://laravel.com/docs/11.x/scout#typesense).
-> 
-> So we've temporarily paused development in this repo and plan to instead address any issues or improvements in the native [Laravel Scout](https://github.com/laravel/scout) driver instead.
-> 
-> If there are any Typesense-specific features that would be hard to implement in Laravel Scout natively (since we need to maintain consistency with all the other drivers), then at that point we plan to add those features into this driver and maintain it as a "Scout Extended Driver" of sorts. But it's too early to tell if we'd want to do this, so we're in a holding pattern on this repo for now.
-> 
-> In the meantime, we recommend switching to the native Laravel Scout driver and report any issues in the [Laravel Scout repo](https://github.com/laravel/scout).
+## Requirements
+
+| Dependency                | Supported versions                     |
+|---------------------------|----------------------------------------|
+| PHP                       | 8.4, 8.5                               |
+| Laravel (`illuminate/*`)  | 12.69+ or 13.30+                       |
+| Laravel Scout             | 11.8+                                  |
+| `typesense/typesense-php` | 6.x                                    |
+| Typesense server          | 30.x                                   |
+
+> [!NOTE]
+> The Laravel floor is intentionally above the releases affected by published security advisories
+> (most recently CVE-2026-102279, fixed in 12.69.0 / 13.30.0). Composer will refuse to install this package
+> alongside an older, vulnerable Laravel release — run `composer update laravel/framework` first if it does.
 
 ## Contents
 
+- [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Standalone Typesense (without Scout)](#standalone-typesense-without-scout)
-- [Migrating from siberfx/typesense-scout](#migrating-from-siberfx-typesense)
+- [Migrating from siberfx/laravel-typesense](#migrating-from-siberfxlaravel-typesense)
+- [Testing](#testing)
 - [Authors](#authors)
 - [License](#license)
 
 
 ## Installation
-The Typesense PHP SDK uses httplug to interface with various PHP HTTP libraries through a single API. 
+The Typesense PHP SDK uses httplug to interface with various PHP HTTP libraries through a single API.
 
-First, install the correct httplug adapter based on your `guzzlehttp/guzzle` version. For example, if you're on 
-Laravel 8, which includes Guzzle 7, then run this:
+First, install the httplug adapter that matches your `guzzlehttp/guzzle` version. Laravel 12 and 13 ship
+with Guzzle 7, so run:
 
 ```bash
 composer require php-http/guzzle7-adapter
@@ -802,7 +813,6 @@ $c->analyticsV1()->rules()->retrieve();
 - Replace `siberfx/laravel-typesense` in your composer.json requirements with `siberfx/typesense-scout`
 - The Scout driver is now called `typesense`, instead of `typesensesearch`. This should be reflected by setting the SCOUT_DRIVER env var to `typesense`,
   and changing the config/scout.php config key from `typesensesearch` to `typesense`
-- Instead of importing `Siberfx\Typesense\*`, you should import `Siberfx\Typesense\*`
 - Instead of models implementing `Siberfx\Typesense\Interfaces\TypesenseSearch`, they should implement `Siberfx\Typesense\Interfaces\TypesenseDocument`
 
 ## Testing
@@ -827,12 +837,17 @@ The suite has two groups:
   vendor/bin/phpunit --testsuite Integration
   ```
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+
 ## Authors
-Anonymous
 
-Other key contributors include:
+- [Selim Görmüş](https://siberfx.com) — maintainer
 
+Originally based on the [Typesense Laravel Scout driver](https://github.com/typesense/laravel-scout-typesense-driver)
+by Typesense, Inc.
 
 ## License
 
-The MIT License (MIT). Please see the [License File](LICENSE.md) for more information.
+The MIT License (MIT). Please see the [License File](LICENSE) for more information.

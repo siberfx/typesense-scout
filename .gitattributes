@@ -1,0 +1,7 @@
+# Keep the Packagist dist archive lean: only ship what the package needs at runtime.
+/.github            export-ignore
+/tests              export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/phpunit.xml        export-ignore
+/CHANGELOG.md       export-ignore

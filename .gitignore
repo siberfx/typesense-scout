@@ -3,3 +3,9 @@
 /composer.lock
 vendor
 .phpunit.result.cache
+.phpunit.cache
+
+# Local tooling / internal planning notes — never published
+/docs
+/.superpowers
+/.claude

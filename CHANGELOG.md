@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-05
+
+### Security
+- Raised the Laravel floor above every release covered by a published advisory:
+  `illuminate/*` now requires `^12.69|^13.30` (was `^12.0|^13.0`). This excludes
+  versions affected by CVE-2026-102279 (XSS in debug page information,
+  `<12.69.0` / `<13.30.0`), CVE-2026-48019 (CRLF injection in the default email
+  rule), the temporary signed URL path confusion advisory (`<12.61.1` /
+  `<13.12.0`) and CVE-2025-27515 (file validation bypass). Because
+  `laravel/framework` replaces the `illuminate/*` packages, Composer now refuses
+  to install the driver next to a vulnerable framework release.
+
+### Changed
+- Require `laravel/scout` `^11.8` (was `^11.7`), matching the Scout 11.8 features
+  already ported into the engine.
+- Dev dependencies: `phpunit/phpunit` `^13.4`, `vlucas/phpdotenv` `^5.7`,
+  `php-http/guzzle7-adapter` `^1.1`. `composer audit` reports no advisories for
+  either the lowest or the highest dependency set.
+- README: the Tests badge now uses GitHub's native workflow badge (the shields.io
+  badge could render "no status" after a successful run); added a Laravel badge,
+  a Requirements table and a Changelog section; replaced the upstream
+  "development paused" notice with a description of this package; fixed the
+  Migrating anchor, the License link and the Authors section; refreshed the
+  installation note (Laravel 12/13 ship Guzzle 7).
+- LICENSE: added the maintainer's copyright line alongside the original
+  Typesense, Inc notice.
+- `composer.json`: homepage points to the GitHub repository; added `scout` and
+  `vector-search` keywords.
+
+### Removed
+- Internal planning docs (`docs/`) are no longer tracked; `docs/`, `.superpowers/`
+  and `.claude/` are now git-ignored.
+- `scout-import.yml` workflow: it checked out and tested an unrelated external
+  repository and never exercised this package's code.
+- Redundant `suggest` entry for `typesense/typesense-php` (already a hard
+  requirement) and the unused `pestphp/pest-plugin` allow-plugins entry.
+
+### Added
+- `.gitattributes` with `export-ignore` rules so Packagist dist archives ship only
+  `src/`, `config/`, `composer.json`, README and LICENSE (no tests, CI or
+  phpunit config).
+
+## [1.6.1] - 2026-09-29
+
 ### Added
 - Scout `semantic()` and `hybrid()` searches (ported from laravel/scout 11.7).
   The engine now implements `SupportsSemanticSearch`; previously `semantic()`
@@ -146,3 +190,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Dropped Laravel 10 and 11 support: `illuminate/*` constraints narrowed from
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
+
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.7.0...HEAD
+[1.7.0]: https://github.com/siberfx/typesense-scout/compare/1.6.1...1.7.0
+[1.6.1]: https://github.com/siberfx/typesense-scout/compare/1.5.0...1.6.1
