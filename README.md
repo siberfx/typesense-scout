@@ -2,7 +2,7 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
 [![Total Downloads](https://img.shields.io/packagist/dt/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
-[![Tests](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml/badge.svg?branch=main)](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml?query=branch%3Amain)
+[![Tests](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml/badge.svg?event=push)](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml?query=branch%3Amain)
 [![PHP Version](https://img.shields.io/badge/php-8.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/supported-versions.php)
 [![Laravel](https://img.shields.io/badge/laravel-12.69%2B%20%7C%2013.30%2B-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com/docs/13.x/releases)
 [![License](https://img.shields.io/packagist/l/siberfx/typesense-scout.svg?style=flat-square)](LICENSE)
