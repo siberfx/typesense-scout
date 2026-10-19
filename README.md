@@ -445,8 +445,10 @@ $typesense->deleteAlias('todos');
 
 // Analytics rules
 $typesense->upsertAnalyticsRule('popular-todos', [
-    'type'   => 'popular_queries',
-    'params' => [/* ... */],
+    'type'       => 'popular_queries',
+    'collection' => 'todos',
+    'event_type' => 'search',
+    'params'     => ['destination_collection' => 'todo_queries', 'limit' => 1000],
 ]);
 $typesense->retrieveAnalyticsRules();
 $typesense->retrieveAnalyticsRule('popular-todos');

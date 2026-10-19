@@ -502,7 +502,9 @@ class Typesense
      * Create or update an analytics rule.
      *
      * @param string $ruleName
-     * @param array  $params e.g. ['type' => 'popular_queries', 'params' => [...]].
+     * @param array  $params v30 rule, e.g. ['type' => 'popular_queries',
+     *                       'collection' => 'products', 'event_type' => 'search',
+     *                       'params' => [...]].
      *
      * @return array
      * @throws \Typesense\Exceptions\TypesenseClientError
@@ -510,7 +512,8 @@ class Typesense
      */
     public function upsertAnalyticsRule(string $ruleName, array $params): array
     {
-        return $this->client->getAnalytics()->rules()->upsert($ruleName, $params);
+        // v30 has no rules()->upsert(): PUT /analytics/rules/{name} upserts.
+        return $this->client->getAnalytics()->rules()[$ruleName]->update($params);
     }
 
     /**

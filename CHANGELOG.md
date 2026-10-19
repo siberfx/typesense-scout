@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.7.2] - 2026-10-19
 
 ### Fixed
+- `Typesense::upsertAnalyticsRule()` failed with "Call to undefined method
+  AnalyticsRules::upsert()": typesense-php 6.x (server v30) has no such
+  method. It now upserts through `PUT /analytics/rules/{name}`. The README
+  example uses the v30 rule structure (`collection`, `event_type`).
 - A missing collection is now always created under the name it is looked up by
   (`searchableAs()`): when `getCollectionSchema()` omits `name`, it defaults to
   `searchableAs()` instead of the create call failing. Explicit schema names are
