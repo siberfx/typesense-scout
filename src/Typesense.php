@@ -265,6 +265,235 @@ class Typesense
         return $this->client->getKeys()->create($schema);
     }
 
+    /**
+     * Retrieve all API keys (values are not returned, only prefixes).
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveApiKeys(): array
+    {
+        return $this->client->getKeys()->retrieve();
+    }
+
+    /**
+     * Retrieve a single API key.
+     *
+     * @param int $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveApiKey(int $id): array
+    {
+        return $this->client->getKeys()[$id]->retrieve();
+    }
+
+    /**
+     * Delete an API key.
+     *
+     * @param int $id
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteApiKey(int $id): array
+    {
+        return $this->client->getKeys()[$id]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Synonym Sets (server v30+)
+    |
+    | Global synonym sets, shared across collections through the collection's
+    | `synonym_sets` field or per search via synonymSets().
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a synonym set.
+     *
+     * @param string $name
+     * @param array  $config e.g. ['items' => [['id' => 'coat', 'synonyms' => ['coat', 'jacket']]]].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertSynonymSet(string $name, array $config): array
+    {
+        return $this->client->getSynonymSets()->upsert($name, $config);
+    }
+
+    /**
+     * Retrieve all synonym sets.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveSynonymSets(): array
+    {
+        return $this->client->getSynonymSets()->retrieve();
+    }
+
+    /**
+     * Retrieve a single synonym set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveSynonymSet(string $name): array
+    {
+        return $this->client->getSynonymSets()[$name]->retrieve();
+    }
+
+    /**
+     * Delete a synonym set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteSynonymSet(string $name): array
+    {
+        return $this->client->getSynonymSets()[$name]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Curation Sets (server v30+)
+    |
+    | Global curation rules (formerly per-collection overrides), shared across
+    | collections through the collection's `curation_sets` field. Rules tagged
+    | with `tags` are triggered per search via curationTags().
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Create or update a curation set.
+     *
+     * @param string $name
+     * @param array  $config e.g. ['items' => [['id' => 'pin-apple', 'rule' => [...], 'includes' => [...]]]].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertCurationSet(string $name, array $config): array
+    {
+        return $this->client->getCurationSets()->upsert($name, $config);
+    }
+
+    /**
+     * Retrieve all curation sets.
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveCurationSets(): array
+    {
+        return $this->client->getCurationSets()->retrieve();
+    }
+
+    /**
+     * Retrieve a single curation set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveCurationSet(string $name): array
+    {
+        return $this->client->getCurationSets()[$name]->retrieve();
+    }
+
+    /**
+     * Delete a curation set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteCurationSet(string $name): array
+    {
+        return $this->client->getCurationSets()[$name]->delete();
+    }
+
+    /**
+     * Create or update a single rule in a curation set.
+     *
+     * @param string $name
+     * @param string $itemId
+     * @param array  $item e.g. ['rule' => ['query' => 'apple', 'match' => 'exact'], 'includes' => [...]].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function upsertCurationSetItem(string $name, string $itemId, array $item): array
+    {
+        return $this->client->getCurationSets()[$name]->getItems()[$itemId]->upsert($item);
+    }
+
+    /**
+     * Retrieve all rules in a curation set.
+     *
+     * @param string $name
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveCurationSetItems(string $name): array
+    {
+        return $this->client->getCurationSets()[$name]->getItems()->retrieve();
+    }
+
+    /**
+     * Retrieve a single rule in a curation set.
+     *
+     * @param string $name
+     * @param string $itemId
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveCurationSetItem(string $name, string $itemId): array
+    {
+        return $this->client->getCurationSets()[$name]->getItems()[$itemId]->retrieve();
+    }
+
+    /**
+     * Delete a single rule from a curation set.
+     *
+     * @param string $name
+     * @param string $itemId
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function deleteCurationSetItem(string $name, string $itemId): array
+    {
+        return $this->client->getCurationSets()[$name]->getItems()[$itemId]->delete();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Synonyms (per collection) — DEPRECATED on Typesense server v30+
@@ -272,7 +501,7 @@ class Typesense
     | Per-collection synonyms were removed in Typesense server v30 (replaced by
     | global "synonym sets"). These methods only work against server < 30; on
     | v30+ they return 404. Use global synonym sets instead:
-    | TypesenseDirect::synonymSets() (or \Typesense\Client::getSynonymSets()).
+    | upsertSynonymSet() and friends, or TypesenseDirect::synonymSets().
     |--------------------------------------------------------------------------
     */
 
@@ -355,7 +584,7 @@ class Typesense
     | Per-collection overrides/curation were removed in Typesense server v30
     | (replaced by global "curation sets"). These methods only work against
     | server < 30; on v30+ they return 404. Use global curation sets instead:
-    | TypesenseDirect::curationSets() (or \Typesense\Client::getCurationSets()).
+    | upsertCurationSet() and friends, or TypesenseDirect::curationSets().
     |--------------------------------------------------------------------------
     */
 
@@ -554,6 +783,40 @@ class Typesense
     public function deleteAnalyticsRule(string $ruleName): array
     {
         return $this->client->getAnalytics()->rules()[$ruleName]->delete();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Analytics Events
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Send an analytics event (click, conversion, visit, ...).
+     *
+     * @param array $event e.g. ['name' => 'product_clicks', 'event_type' => 'click', 'data' => [...]].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function createAnalyticsEvent(array $event): array
+    {
+        return $this->client->getAnalytics()->events()->create($event);
+    }
+
+    /**
+     * Retrieve analytics events for a user.
+     *
+     * @param array $params e.g. ['user_id' => 'u1', 'name' => 'product_clicks', 'n' => 10].
+     *
+     * @return array
+     * @throws \Typesense\Exceptions\TypesenseClientError
+     * @throws \Http\Client\Exception
+     */
+    public function retrieveAnalyticsEvents(array $params): array
+    {
+        return $this->client->getAnalytics()->events()->retrieve($params);
     }
 
     /*

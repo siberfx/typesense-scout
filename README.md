@@ -223,6 +223,26 @@ $searchRequests = [
 Todo::search('')->searchMulti($searchRequests)->paginateRaw();
 ```
 
+### Typesense v30 Search Parameters
+Synonym sets, curation tags and the other server v30 options can be set per search:
+```php
+Todo::search('coat')
+    ->synonymSets(['clothing', 'seasonal'])  // synonym_sets, on top of the collection's own
+    ->curationTags('summer-promo')           // curation_tags (formerly override_tags)
+    ->diversityLambda(0.75)                  // MMR balance for diversity curation rules
+    ->groupBy('category')
+    ->groupMaxCandidates(500)                // exact `found` for group_by up to 500
+    ->get();
+```
+
+Any other Typesense search parameter can be passed with Scout's `options()`. It
+takes precedence over the driver's defaults:
+```php
+Todo::search('shirt')
+    ->options(['facet_sample_slope' => 0.5, 'facet_return_parent' => 'variants.color'])
+    ->get();
+```
+
 ### Generate Scoped Search Key
 
 You can generate scoped search API keys that have embedded search parameters in them. This is useful in a few different scenarios:
@@ -420,7 +440,34 @@ use Siberfx\Typesense\Typesense;
 
 $typesense = app(Typesense::class);
 
-// Synonyms (per collection)
+// Synonym sets (server v30+, shared across collections)
+$typesense->upsertSynonymSet('clothing', [
+    'items' => [['id' => 'coats', 'synonyms' => ['blazer', 'coat', 'jacket']]],
+]);
+$typesense->retrieveSynonymSets();
+$typesense->retrieveSynonymSet('clothing');
+$typesense->deleteSynonymSet('clothing');
+
+// Curation sets (server v30+) and their individual rules
+$typesense->upsertCurationSet('promos', ['items' => []]);
+$typesense->upsertCurationSetItem('promos', 'promote-tidy', [
+    'rule'     => ['query' => 'tidy', 'match' => 'exact'],
+    'includes' => [['id' => '123', 'position' => 1]],
+]);
+$typesense->retrieveCurationSetItems('promos');
+$typesense->retrieveCurationSetItem('promos', 'promote-tidy');
+$typesense->deleteCurationSetItem('promos', 'promote-tidy');
+$typesense->retrieveCurationSets();
+$typesense->retrieveCurationSet('promos');
+$typesense->deleteCurationSet('promos');
+
+// API keys
+$key = $typesense->createApiKey(['description' => 'Search', 'actions' => ['documents:search'], 'collections' => ['*']]);
+$typesense->retrieveApiKeys();
+$typesense->retrieveApiKey($key['id']);
+$typesense->deleteApiKey($key['id']);
+
+// Synonyms (per collection) — server < 30 only, deprecated
 $typesense->upsertSynonym('todos', 'coat-synonyms', [
     'synonyms' => ['blazer', 'coat', 'jacket'],
 ]);
@@ -428,7 +475,7 @@ $typesense->retrieveSynonyms('todos');
 $typesense->retrieveSynonym('todos', 'coat-synonyms');
 $typesense->deleteSynonym('todos', 'coat-synonyms');
 
-// Curation / overrides (per collection)
+// Curation / overrides (per collection) — server < 30 only, deprecated
 $typesense->upsertOverride('todos', 'promote-tidy', [
     'rule'     => ['query' => 'tidy', 'match' => 'exact'],
     'includes' => [['id' => '123', 'position' => 1]],
@@ -453,6 +500,14 @@ $typesense->upsertAnalyticsRule('popular-todos', [
 $typesense->retrieveAnalyticsRules();
 $typesense->retrieveAnalyticsRule('popular-todos');
 $typesense->deleteAnalyticsRule('popular-todos');
+
+// Analytics events
+$typesense->createAnalyticsEvent([
+    'name'       => 'todo-clicks',
+    'event_type' => 'click',
+    'data'       => ['doc_id' => '1', 'user_id' => 'u1'],
+]);
+$typesense->retrieveAnalyticsEvents(['user_id' => 'u1', 'name' => 'todo-clicks', 'n' => 10]);
 ```
 
 ### Presets, Stopwords, Stemming, Conversation & NL Models
@@ -647,6 +702,9 @@ $connection->alterCollection('books', [
     'fields' => [['name' => 'in_stock', 'type' => 'bool']],
 ]);
 
+// Clone a collection's schema (server v30+: optionally with its documents)
+$connection->cloneCollection('books', 'books_v2', copyDocuments: true);
+
 $connection->dropCollection('books');             // delete the collection
 ```
 
@@ -701,6 +759,14 @@ $res = TypesenseDirect::multiSearch(
     ['per_page' => 5] // common params
 );
 $res['results'][0]['hits'];
+
+// Union search (server v30+): one merged, ordered hit list across searches.
+// Duplicates are removed unless you pass ['remove_duplicates' => false].
+$res = TypesenseDirect::unionSearch([
+    ['collection' => 'books',   'q' => 'dune', 'query_by' => 'title'],
+    ['collection' => 'ebooks',  'q' => 'dune', 'query_by' => 'title'],
+]);
+$res['hits'];
 ```
 
 ### Scoped search API keys
@@ -769,9 +835,9 @@ $client->getCollections()['books']->getSynonyms()->upsert('coat-synonyms', [
 
 | Area | Methods on `TypesenseDirect::connection()` |
 |------|--------------------------------------------|
-| Collections | `createCollection`, `ensureCollection`, `hasCollection`, `retrieveCollection`, `alterCollection`, `dropCollection`, `listCollections` |
+| Collections | `createCollection`, `cloneCollection`, `ensureCollection`, `hasCollection`, `retrieveCollection`, `alterCollection`, `dropCollection`, `listCollections` |
 | Documents (`documents($c)->`) | `create`, `upsert`, `update`, `retrieve`, `delete`, `deleteByFilter`, `import`, `export` |
-| Search | `search`, `multiSearch` |
+| Search | `search`, `multiSearch`, `unionSearch` |
 | Keys | `keys`, `generateScopedSearchKey` |
 | Admin | `aliases`, `presets`, `stopwords`, `stemming`, `analytics`, `analyticsV1`, `synonymSets`, `curationSets`, `conversations`, `nlSearchModels` |
 | Ops | `health`, `metrics`, `debug`, `operations` |

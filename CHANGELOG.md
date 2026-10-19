@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-20
+
+Covers the Typesense server v30 features (up to v30.2, the latest release)
+that were only reachable through the raw client. v30.1 and v30.2 are
+server-side bug fix releases with no API changes.
+
+### Added
+- Scout search builder: `synonymSets()`, `curationTags()`, `diversityLambda()`
+  and `groupMaxCandidates()` for the v30 `synonym_sets`, `curation_tags`,
+  `diversity_lambda` (MMR diversity) and `group_max_candidates` parameters.
+- Scout's `options()` is now passed through to Typesense, so any search
+  parameter (e.g. `facet_sample_slope`, `facet_return_parent`) can be set.
+  Options take precedence over the driver's defaults; Scout's own `vector`
+  option is not sent.
+- `Typesense` facade: synonym set helpers (`upsertSynonymSet`,
+  `retrieveSynonymSets`, `retrieveSynonymSet`, `deleteSynonymSet`), curation
+  set helpers (`upsertCurationSet`, `retrieveCurationSets`,
+  `retrieveCurationSet`, `deleteCurationSet`) and curation set item helpers
+  (`upsertCurationSetItem`, `retrieveCurationSetItems`,
+  `retrieveCurationSetItem`, `deleteCurationSetItem`).
+- `Typesense` facade: `retrieveApiKeys`, `retrieveApiKey`, `deleteApiKey`,
+  `createAnalyticsEvent` and `retrieveAnalyticsEvents`.
+- Standalone: `unionSearch()`, and a third `$body` argument on `multiSearch()`
+  for `union` / `remove_duplicates`.
+- Standalone: `cloneCollection($source, $name, $copyDocuments)`, and an
+  `$options` argument on `createCollection()` for query parameters such as
+  `src_name` / `copy_documents`.
+- Integration tests for union search, cloning with documents, per-search
+  synonym sets, curation set items and API keys (run in CI against 30.2).
+
+### Changed
+- The deprecated per-collection synonym and override helpers now point to the
+  new synonym set and curation set helpers.
+
 ## [1.7.2] - 2026-10-19
 
 ### Fixed
@@ -218,7 +252,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
 
-[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.7.2...HEAD
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.8.0...HEAD
+[1.8.0]: https://github.com/siberfx/typesense-scout/compare/1.7.2...1.8.0
 [1.7.2]: https://github.com/siberfx/typesense-scout/compare/1.7.1...1.7.2
 [1.7.1]: https://github.com/siberfx/typesense-scout/compare/1.7.0...1.7.1
 [1.7.0]: https://github.com/siberfx/typesense-scout/compare/1.6.1...1.7.0

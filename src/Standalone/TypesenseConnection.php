@@ -38,9 +38,27 @@ class TypesenseConnection
 
     // ---- Collections ---------------------------------------------------
 
-    public function createCollection(array $schema): array
+    /**
+     * @param array $options Query parameters, e.g. ['src_name' => 'books'] to
+     *                       clone another collection's schema.
+     */
+    public function createCollection(array $schema, array $options = []): array
     {
-        return $this->client->getCollections()->create($schema);
+        return $this->client->getCollections()->create($schema, $options);
+    }
+
+    /**
+     * Clone a collection's schema (server v30+: optionally with its documents).
+     */
+    public function cloneCollection(string $source, string $name, bool $copyDocuments = false): array
+    {
+        $options = ['src_name' => $source];
+
+        if ($copyDocuments) {
+            $options['copy_documents'] = true;
+        }
+
+        return $this->createCollection(['name' => $name], $options);
     }
 
     public function retrieveCollection(string $name): array
@@ -103,10 +121,23 @@ class TypesenseConnection
      *
      * @param array $searches List of search objects (each with `collection`, `q`, ...).
      * @param array $common   Query parameters common to all searches.
+     * @param array $body     Extra request body options, e.g. ['union' => true,
+     *                        'remove_duplicates' => false] (server v30+).
      */
-    public function multiSearch(array $searches, array $common = []): array
+    public function multiSearch(array $searches, array $common = [], array $body = []): array
     {
-        return $this->client->getMultiSearch()->perform(['searches' => $searches], $common);
+        return $this->client->getMultiSearch()->perform(array_merge($body, ['searches' => $searches]), $common);
+    }
+
+    /**
+     * Union search (server v30+): merge the hits of every search into one
+     * ordered result set.
+     *
+     * @param array $options Extra body options, e.g. ['remove_duplicates' => false].
+     */
+    public function unionSearch(array $searches, array $common = [], array $options = []): array
+    {
+        return $this->multiSearch($searches, $common, array_merge(['union' => true], $options));
     }
 
     // ---- Admin passthroughs (native resources) -------------------------

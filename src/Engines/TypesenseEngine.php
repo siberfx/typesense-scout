@@ -167,6 +167,26 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     private string $vectorQuery = '';
 
     /**
+     * @var array
+     */
+    private array $synonymSets = [];
+
+    /**
+     * @var array
+     */
+    private array $curationTags = [];
+
+    /**
+     * @var float|null
+     */
+    private ?float $diversityLambda = null;
+
+    /**
+     * @var int|null
+     */
+    private ?int $groupMaxCandidates = null;
+
+    /**
      * The `scout.typesense` configuration (used for `model-settings`).
      *
      * @var array
@@ -398,6 +418,10 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
         $this->optionsMulti = [];
         $this->prefix = null;
         $this->vectorQuery = '';
+        $this->synonymSets = [];
+        $this->curationTags = [];
+        $this->diversityLambda = null;
+        $this->groupMaxCandidates = null;
     }
 
     /**
@@ -489,6 +513,26 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
         if (!empty($this->vectorQuery)) {
             $params['vector_query'] = $this->vectorQuery;
         }
+
+        if (!empty($this->synonymSets)) {
+            $params['synonym_sets'] = implode(',', $this->synonymSets);
+        }
+
+        if (!empty($this->curationTags)) {
+            $params['curation_tags'] = implode(',', $this->curationTags);
+        }
+
+        if ($this->diversityLambda !== null) {
+            $params['diversity_lambda'] = $this->diversityLambda;
+        }
+
+        if ($this->groupMaxCandidates !== null) {
+            $params['group_max_candidates'] = $this->groupMaxCandidates;
+        }
+
+        // Scout's options() passes any other Typesense search parameter
+        // through; `vector` is Scout's precomputed embedding, not a parameter.
+        $params = array_merge($params, array_diff_key($builder->options, ['vector' => true]));
 
         return $this->applySemanticSearchParams($builder, $params);
     }
@@ -1583,6 +1627,66 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     public function enableOverrides(bool $enableOverrides): static
     {
         $this->enableOverrides = $enableOverrides;
+
+        return $this;
+    }
+
+    /**
+     * Apply synonym sets to this search (server v30+), in addition to the
+     * sets linked to the collection.
+     *
+     * @param array|string $synonymSets
+     *
+     * @return $this
+     */
+    public function synonymSets(array|string $synonymSets): static
+    {
+        $this->synonymSets = (array) $synonymSets;
+
+        return $this;
+    }
+
+    /**
+     * Trigger the curation rules tagged with these tags (server v30+,
+     * formerly `override_tags`).
+     *
+     * @param array|string $curationTags
+     *
+     * @return $this
+     */
+    public function curationTags(array|string $curationTags): static
+    {
+        $this->curationTags = (array) $curationTags;
+
+        return $this;
+    }
+
+    /**
+     * Balance relevance (1) against diversity (0) for curation rules that
+     * diversify results with MMR (server v30+). Typesense defaults to 0.5.
+     *
+     * @param float $lambda
+     *
+     * @return $this
+     */
+    public function diversityLambda(float $lambda): static
+    {
+        $this->diversityLambda = $lambda;
+
+        return $this;
+    }
+
+    /**
+     * Make `found` exact up to this many candidates in group_by searches
+     * (server v30+).
+     *
+     * @param int $groupMaxCandidates
+     *
+     * @return $this
+     */
+    public function groupMaxCandidates(int $groupMaxCandidates): static
+    {
+        $this->groupMaxCandidates = $groupMaxCandidates;
 
         return $this;
     }

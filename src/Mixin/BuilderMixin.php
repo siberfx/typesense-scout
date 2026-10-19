@@ -436,4 +436,60 @@ class BuilderMixin
             return $this;
         };
     }
+
+    /**
+     * @param array|string $synonymSets
+     *
+     * @return \Closure
+     */
+    public function synonymSets(): Closure
+    {
+        return function (array|string $synonymSets) {
+            $this->engine()->synonymSets($synonymSets);
+
+            return $this;
+        };
+    }
+
+    /**
+     * @param array|string $curationTags
+     *
+     * @return \Closure
+     */
+    public function curationTags(): Closure
+    {
+        return function (array|string $curationTags) {
+            $this->engine()->curationTags($curationTags);
+
+            return $this;
+        };
+    }
+
+    /**
+     * @param float $lambda
+     *
+     * @return \Closure
+     */
+    public function diversityLambda(): Closure
+    {
+        return function (float $lambda) {
+            $this->engine()->diversityLambda($lambda);
+
+            return $this;
+        };
+    }
+
+    /**
+     * @param int $groupMaxCandidates
+     *
+     * @return \Closure
+     */
+    public function groupMaxCandidates(): Closure
+    {
+        return function (int $groupMaxCandidates) {
+            $this->engine()->groupMaxCandidates($groupMaxCandidates);
+
+            return $this;
+        };
+    }
 }
