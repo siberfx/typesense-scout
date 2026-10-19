@@ -17,7 +17,7 @@ admin API wrappers — and a standalone `TypesenseDirect` client for talking to 
 |---------------------------|----------------------------------------|
 | PHP                       | 8.4, 8.5                               |
 | Laravel (`illuminate/*`)  | 12.69+ or 13.30+                       |
-| Laravel Scout             | 11.8+                                  |
+| Laravel Scout             | 11.9+                                  |
 | `typesense/typesense-php` | 6.x                                    |
 | Typesense server          | 30.x                                   |
 

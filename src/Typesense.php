@@ -83,17 +83,24 @@ class Typesense
      */
     private function getOrCreateCollectionFromModel($model): Collection
     {
-        $index = $this->client->getCollections()->{$model->searchableAs()};
+        $collectionName = $model->searchableAs();
+        $index = $this->client->getCollections()->{$collectionName};
 
         try {
             $index->retrieve();
 
             return $index;
         } catch (ObjectNotFound $exception) {
-            $this->client->getCollections()
-                         ->create($model->getCollectionSchema());
+            $schema = $model->getCollectionSchema();
 
-            return $this->client->getCollections()->{$model->searchableAs()};
+            // Create the collection under the name it was looked up by.
+            if (! isset($schema['name'])) {
+                $schema['name'] = $collectionName;
+            }
+
+            $this->client->getCollections()->create($schema);
+
+            return $this->client->getCollections()->{$collectionName};
         }
     }
 

@@ -43,7 +43,7 @@
     },
     "require": {
         "php": "^8.4",
-        "laravel/scout": "^11.8",
+        "laravel/scout": "^11.9",
         "illuminate/bus": "^12.69|^13.30",
         "illuminate/contracts": "^12.69|^13.30",
         "illuminate/database": "^12.69|^13.30",

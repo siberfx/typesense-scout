@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-10-19
+
+### Fixed
+- A missing collection is now always created under the name it is looked up by
+  (`searchableAs()`): when `getCollectionSchema()` omits `name`, it defaults to
+  `searchableAs()` instead of the create call failing. Explicit schema names are
+  kept. Ported from laravel/scout 11.9 (#1013).
+
+### Changed
+- Require `laravel/scout` `^11.9` (was `^11.8`), which also preserves the queue
+  and connection for queued imports (`scout:queue-import`).
+- `typesense/typesense-php` stays at `^6.0`: 6.0.0 is still the latest stable
+  SDK release. 6.1.0 is only available as a release candidate (RC2), so this
+  release doesn't adopt it.
+- Lock file refreshed (`illuminate/*` 13.37, `phpunit/phpunit` 13.4.3).
+  `composer audit` reports no advisories.
+
 ## [1.7.1] - 2026-10-05
 
 ### Fixed
@@ -197,7 +214,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
 
-[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.7.1...HEAD
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.7.2...HEAD
+[1.7.2]: https://github.com/siberfx/typesense-scout/compare/1.7.1...1.7.2
 [1.7.1]: https://github.com/siberfx/typesense-scout/compare/1.7.0...1.7.1
 [1.7.0]: https://github.com/siberfx/typesense-scout/compare/1.6.1...1.7.0
 [1.6.1]: https://github.com/siberfx/typesense-scout/compare/1.5.0...1.6.1
