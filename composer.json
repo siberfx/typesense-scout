@@ -42,7 +42,7 @@
         }
     },
     "require": {
-        "php": "^8.4",
+        "php": "^8.3",
         "laravel/scout": "^11.9",
         "illuminate/bus": "^12.69|^13.30",
         "illuminate/contracts": "^12.69|^13.30",
@@ -53,13 +53,13 @@
         "typesense/typesense-php": "^6.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^13.4",
+        "phpunit/phpunit": "^12.0|^13.4",
         "vlucas/phpdotenv": "^5.7",
         "php-http/guzzle7-adapter": "^1.1"
     },
     "config": {
         "platform": {
-            "php": "8.4.1"
+            "php": "8.3.0"
         },
         "allow-plugins": {
             "php-http/discovery": true

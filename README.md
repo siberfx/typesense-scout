@@ -3,11 +3,11 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
 [![Total Downloads](https://img.shields.io/packagist/dt/siberfx/typesense-scout.svg?style=flat-square)](https://packagist.org/packages/siberfx/typesense-scout)
 [![Tests](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml/badge.svg?event=push)](https://github.com/siberfx/typesense-scout/actions/workflows/pull-request.yml?query=branch%3Amain)
-[![PHP Version](https://img.shields.io/badge/php-8.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/supported-versions.php)
+[![PHP Version](https://img.shields.io/badge/php-8.3%20%7C%208.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/supported-versions.php)
 [![Laravel](https://img.shields.io/badge/laravel-12.69%2B%20%7C%2013.30%2B-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com/docs/13.x/releases)
 [![License](https://img.shields.io/packagist/l/siberfx/typesense-scout.svg?style=flat-square)](LICENSE)
 
-This package makes it easy to add full text search support to your models with Laravel 12 and 13 on PHP 8.4 and 8.5.
+This package makes it easy to add full text search support to your models with Laravel 12 and 13 on PHP 8.3, 8.4 and 8.5.
 On top of the Scout driver it ships Typesense-specific extras — vector / hybrid / semantic search, scoped search keys,
 admin API wrappers — and a standalone `TypesenseDirect` client for talking to Typesense without Scout.
 
@@ -15,7 +15,7 @@ admin API wrappers — and a standalone `TypesenseDirect` client for talking to 
 
 | Dependency                | Supported versions                     |
 |---------------------------|----------------------------------------|
-| PHP                       | 8.4, 8.5                               |
+| PHP                       | 8.3, 8.4, 8.5                          |
 | Laravel (`illuminate/*`)  | 12.69+ or 13.30+                       |
 | Laravel Scout             | 11.9+                                  |
 | `typesense/typesense-php` | 6.x                                    |

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-29
+
+### Added
+- PHP 8.3 support: `composer.json` now requires `php ^8.3`, and CI tests PHP 8.3
+  alongside 8.4 and 8.5.
+
+### Changed
+- Composer's platform PHP is pinned to `8.3.0` (was `8.4.1`), so the lock file
+  resolves dependencies that install on every supported PHP version.
+- `phpunit/phpunit` is `^12.0|^13.4`: PHPUnit 13 requires PHP 8.4, so PHP 8.3
+  installs PHPUnit 12.
+
 ## [1.8.0] - 2026-10-20
 
 Covers the Typesense server v30 features (up to v30.2, the latest release)
@@ -252,7 +264,8 @@ server-side bug fix releases with no API changes.
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
 
-[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.8.0...HEAD
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.9.0...HEAD
+[1.9.0]: https://github.com/siberfx/typesense-scout/compare/1.8.0...1.9.0
 [1.8.0]: https://github.com/siberfx/typesense-scout/compare/1.7.2...1.8.0
 [1.7.2]: https://github.com/siberfx/typesense-scout/compare/1.7.1...1.7.2
 [1.7.1]: https://github.com/siberfx/typesense-scout/compare/1.7.0...1.7.1
