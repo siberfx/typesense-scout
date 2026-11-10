@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.4] - 2026-11-10
+
+### Changed
+- A failed batch import now reports every failed row: the count, the row positions and
+  their errors (first ten, then "and N more"). Before, it stopped at the first failed row
+  and named only that one. Scout still retries the whole batch, as before.
+
 ## [1.10.3] - 2026-11-10
 
 ### Changed

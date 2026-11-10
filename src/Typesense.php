@@ -238,15 +238,48 @@ class Typesense
                                              ->import($documents, ['action' => $action]);
 
         $result = [];
-        foreach ($importedDocuments as $importedDocument) {
+        $failures = [];
+        foreach ($importedDocuments as $row => $importedDocument) {
             if (!$importedDocument['success']) {
-                throw new TypesenseClientError("Error importing document: {$importedDocument['error']}");
+                $failures[$row] = (string) ($importedDocument['error'] ?? 'unknown error');
+
+                continue;
             }
 
             $result[] = new TypesenseDocumentIndexResponse($importedDocument['code'] ?? 0, $importedDocument['success'], $importedDocument['error'] ?? null, json_decode($importedDocument['document'] ?? '[]', true, 512, JSON_THROW_ON_ERROR));
         }
 
+        if ($failures !== []) {
+            throw new TypesenseClientError(self::importFailureMessage($failures, count($importedDocuments)));
+        }
+
         return collect($result);
+    }
+
+    /**
+     * Describe every failed row of a batch import, listing at most ten of them.
+     *
+     * @param array<int, string> $failures Error message keyed by row position.
+     * @param int $total Number of documents in the batch.
+     */
+    private static function importFailureMessage(array $failures, int $total): string
+    {
+        $listed = array_slice($failures, 0, 10, true);
+
+        $details = [];
+        foreach ($listed as $row => $error) {
+            $details[] = "row {$row}: {$error}";
+        }
+
+        $more = count($failures) - count($listed);
+
+        return sprintf(
+            'Error importing %d of %d documents: %s%s',
+            count($failures),
+            $total,
+            implode('; ', $details),
+            $more > 0 ? "; and {$more} more" : ''
+        );
     }
 
     /**
