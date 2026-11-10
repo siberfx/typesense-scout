@@ -199,7 +199,9 @@ class SemanticSearchTest extends TestCase
     public function test_update_adds_precomputed_and_generated_embeddings_to_documents(): void
     {
         $typesense = $this->createMock(Typesense::class);
-        $typesense->method('getCollectionIndex')->willReturn($this->createStub(Collection::class));
+        $collection = $this->createStub(Collection::class);
+        $typesense->method('getCollectionIndex')->willReturn($collection);
+        $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
         $typesense->expects($this->once())
             ->method('importDocuments')
             ->with($this->anything(), [
@@ -220,7 +222,9 @@ class SemanticSearchTest extends TestCase
     public function test_update_does_not_generate_embeddings_with_native_driver(): void
     {
         $typesense = $this->createMock(Typesense::class);
-        $typesense->method('getCollectionIndex')->willReturn($this->createStub(Collection::class));
+        $collection = $this->createStub(Collection::class);
+        $typesense->method('getCollectionIndex')->willReturn($collection);
+        $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
         $typesense->expects($this->once())
             ->method('importDocuments')
             ->with($this->anything(), [['id' => 1, 'name' => 'abcd']]);

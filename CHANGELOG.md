@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.3] - 2026-11-10
+
+### Changed
+- Collection handles are cached per process. Searches, updates and deletes no longer
+  make an extra request to check that the collection exists, which saves one request
+  per search and one per deleted model.
+- If a cached collection was dropped by another process, the next operation looks it
+  up again and retries once, so the search or import still succeeds.
+- `flush()` and `Typesense::deleteCollection()` remove the cached handle.
+
 ## [1.10.2] - 2026-11-10
 
 ### Fixed

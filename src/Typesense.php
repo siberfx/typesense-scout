@@ -3,8 +3,10 @@
 namespace Siberfx\Typesense;
 
 use BadMethodCallException;
+use Closure;
 use Illuminate\Support\Facades\Config;
 use Typesense\Exceptions\TypesenseClientError;
+use Siberfx\Typesense\Classes\CollectionIndexCache;
 use Siberfx\Typesense\Classes\TypesenseDocumentIndexResponse;
 use Siberfx\Typesense\Scout\ScopedSearch;
 use Typesense\Client;
@@ -28,6 +30,12 @@ class Typesense
     private Client $client;
 
     /**
+     * Collection handles already looked up, so each operation does not repeat
+     * the "does this collection exist?" request.
+     */
+    private CollectionIndexCache $collectionCache;
+
+    /**
      * Typesense constructor.
      *
      * @param \Typesense\Client $client
@@ -35,6 +43,7 @@ class Typesense
     public function __construct(Client $client)
     {
         $this->client = $client;
+        $this->collectionCache = new CollectionIndexCache();
     }
 
     /**
@@ -120,7 +129,38 @@ class Typesense
      */
     public function getCollectionIndex($model): Collection
     {
-        return $this->getOrCreateCollectionFromModel($model);
+        return $this->collectionCache->remember(
+            $model->searchableAs(),
+            fn (): Collection => $this->getOrCreateCollectionFromModel($model)
+        );
+    }
+
+    /**
+     * Run an operation on a model's collection. If the cached collection has been
+     * dropped by another process, forget it and retry once against a fresh lookup.
+     *
+     * @param mixed $model
+     * @param Closure(Collection): mixed $operation
+     *
+     * @return mixed
+     */
+    public function withCollection($model, Closure $operation): mixed
+    {
+        try {
+            return $operation($this->getCollectionIndex($model));
+        } catch (ObjectNotFound) {
+            $this->forgetCollection($model->searchableAs());
+
+            return $operation($this->getCollectionIndex($model));
+        }
+    }
+
+    /**
+     * Drop a collection handle from the cache, e.g. after the collection was deleted.
+     */
+    public function forgetCollection(string $collectionName): void
+    {
+        $this->collectionCache->forget($collectionName);
     }
 
     /**
@@ -220,7 +260,10 @@ class Typesense
      */
     public function deleteCollection(string $collectionName): array
     {
-        return $this->client->getCollections()->{$collectionName}->delete();
+        $result = $this->client->getCollections()->{$collectionName}->delete();
+        $this->forgetCollection($collectionName);
+
+        return $result;
     }
 
     /**

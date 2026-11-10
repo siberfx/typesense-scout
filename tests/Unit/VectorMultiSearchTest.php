@@ -40,6 +40,7 @@ class VectorMultiSearchTest extends TestCase
 
         $typesense = $this->createMock(Typesense::class);
         $typesense->method('getCollectionIndex')->willReturn($collection);
+        $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
 
         return $typesense;
     }

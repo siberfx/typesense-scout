@@ -219,8 +219,6 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             return;
         }
 
-        $collection = $this->typesense->getCollectionIndex($models->first());
-
         if ($this->usesSoftDelete($models->first())) {
             if (config('scout.soft_delete', false)) {
                 $models->each->pushSoftDeleteMetadata();
@@ -249,7 +247,10 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             ? $this->addEmbeddingsToDocuments($records, $settings)
             : array_column($records, 'document');
 
-        $this->typesense->importDocuments($collection, $documents);
+        $this->typesense->withCollection(
+            $models->first(),
+            fn ($collection) => $this->typesense->importDocuments($collection, $documents)
+        );
     }
 
     /**
@@ -317,10 +318,11 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     public function delete($models): void
     {
         $models->each(function (Model $model) {
-            $collectionIndex = $this->typesense->getCollectionIndex($model);
-
             // TODO look into this vs $model->getKey()
-            $this->typesense->deleteDocument($collectionIndex, $model->getScoutKey());
+            $this->typesense->withCollection(
+                $model,
+                fn ($collectionIndex) => $this->typesense->deleteDocument($collectionIndex, $model->getScoutKey())
+            );
         });
     }
 
@@ -876,8 +878,10 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     protected function performSearch(Builder $builder, array $options = []): mixed
     {
         if ($builder->callback) {
-            $documents = $this->typesense->getCollectionIndex($builder->model)
-                ->getDocuments();
+            $documents = $this->typesense->withCollection(
+                $builder->model,
+                static fn ($collection) => $collection->getDocuments()
+            );
 
             return call_user_func($builder->callback, $documents, $builder->query, $options);
         }
@@ -886,11 +890,16 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             return $this->typesense->multiSearch(...$this->moveVectorQueryIntoSearches($this->optionsMulti, $options));
         }
 
-        $documents = $this->typesense->getCollectionIndex($builder->model)->getDocuments();
-
         if (!isset($options['vector_query'])) {
-            return $documents->search($options);
+            return $this->typesense->withCollection(
+                $builder->model,
+                static fn ($collection) => $collection->getDocuments()->search($options)
+            );
         }
+
+        // Vector queries go through multi-search, which needs no handle, but the
+        // collection is still ensured to exist, as a plain search does.
+        $this->typesense->withCollection($builder->model, static fn ($collection) => $collection);
 
         // A serialized embedding easily exceeds Typesense's query string
         // length limit on a GET search, so vector queries are sent in the
@@ -1210,6 +1219,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     {
         $collection = $this->typesense->getCollectionIndex($model);
         $collection->delete();
+        $this->typesense->forgetCollection($model->searchableAs());
     }
 
     /**
