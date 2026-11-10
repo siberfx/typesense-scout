@@ -974,7 +974,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
 
         $listValue = fn (array $values) => $escape
             ? array_map([$this, 'escapeWhereValue'], $values)
-            : $this->parseFilterValue($values);
+            : array_map([$this, 'quoteListValue'], $this->parseFilterValue($values));
 
         // Scout 11 stores where() clauses as ['field', 'operator', 'value']
         // entries; plain `field => value` pairs are still accepted.
@@ -1041,6 +1041,27 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             is_bool($value) => $value ? 'true' : 'false',
             default => (string) $value,
         };
+    }
+
+    /**
+     * Quote a whereIn/whereNotIn list item when it would otherwise break the list.
+     *
+     * Plain values (words, numbers, booleans) stay unquoted, so the common output
+     * is unchanged. A string with a comma, space, bracket or backtick, or an empty
+     * string, is quoted, because `[a,b]` is read as two items.
+     *
+     * @param mixed $value
+     *
+     * @return mixed
+     */
+    private function quoteListValue(mixed $value): mixed
+    {
+        if (is_string($value) && !is_numeric($value)
+            && ($value === '' || preg_match('/[^\w.\-@\/]/u', $value) === 1)) {
+            return static::escapeFilterValue($value);
+        }
+
+        return $value;
     }
 
     /**

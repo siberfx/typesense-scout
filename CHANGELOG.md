@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.2] - 2026-11-10
+
+### Fixed
+- `whereIn()` and `whereNotIn()` split string values that contain a comma, space,
+  bracket or backtick. `->whereIn('name', ['Red, Blue'])` produced `name:=[Red, Blue]`,
+  which Typesense reads as two items. Such values are now backtick-quoted. Plain
+  values and numbers render as before. Empty strings are quoted too.
+
 ## [1.10.1] - 2026-11-10
 
 ### Changed

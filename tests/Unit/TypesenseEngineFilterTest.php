@@ -109,6 +109,26 @@ class TypesenseEngineFilterTest extends TestCase
         $this->assertSame('name:=a && b', $this->callFilters($builder));
     }
 
+    public function test_where_in_quotes_string_values_that_contain_list_syntax(): void
+    {
+        $builder = $this->builder();
+        $builder->whereIns = ['tag' => ['a,b', 'plain word', 'plain', 42]];
+
+        // Without quoting, "a,b" and "plain word" split into several list items.
+        $this->assertSame(
+            'tag:=[`a,b`, `plain word`, plain, 42]',
+            $this->callFilters($builder)
+        );
+    }
+
+    public function test_where_not_in_quotes_string_values_that_contain_list_syntax(): void
+    {
+        $builder = $this->builder();
+        $builder->whereNotIns = ['tag' => ['Red, Blue', 'x']];
+
+        $this->assertSame('tag:!=[`Red, Blue`, x]', $this->callFilters($builder));
+    }
+
     public function test_escape_filter_values_option_escapes_where_and_where_in_values(): void
     {
         $engine = new TypesenseEngine($this->createStub(Typesense::class), ['escape_filter_values' => true]);

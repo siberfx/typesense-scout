@@ -328,6 +328,10 @@ Todo::search('shoes')
 
 Boolean values are rendered as Typesense literals (`true`/`false`) automatically.
 
+List values that contain a comma, space, bracket or backtick are quoted for you, so
+`->whereIn('name', ['Red, Blue'])` matches the single value `Red, Blue`. Plain words and
+numbers are left unquoted.
+
 Filter values can come from user input, so escaping protects you: a value such as
 `a || b:=c` must not change the filter. The published `config/scout.php` enables it
 (`TYPESENSE_ESCAPE_FILTER_VALUES`, default `true`). If you installed the package
