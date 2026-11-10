@@ -21,16 +21,21 @@ class CollectionCacheIntegrationTest extends IntegrationTestCase
 
     private function model(): object
     {
-        return new class {
+        // The anonymous class cannot read the test's private constant, so the name is passed in.
+        return new class(self::COLLECTION) {
+            public function __construct(private readonly string $collection)
+            {
+            }
+
             public function searchableAs(): string
             {
-                return CollectionCacheIntegrationTest::COLLECTION;
+                return $this->collection;
             }
 
             public function getCollectionSchema(): array
             {
                 return [
-                    'name' => CollectionCacheIntegrationTest::COLLECTION,
+                    'name' => $this->collection,
                     'fields' => [['name' => 'title', 'type' => 'string']],
                 ];
             }

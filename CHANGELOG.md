@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.8] - 2026-11-10
+
+### Fixed
+- The CI integration suite failed on 1.10.3 to 1.10.7 because a new test read a private
+  constant from an anonymous class. The package code was not affected.
+
 ## [1.10.7] - 2026-11-10
 
 ### Fixed
