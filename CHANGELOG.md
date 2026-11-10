@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.10] - 2026-11-10
+
+### Changed
+- `TypesenseEngine` is split into focused classes: `Engines\Filters\FilterBuilder` (the
+  `filter_by` string), `Engines\Semantic\EmbeddingSettings` (reading and validating
+  embedding settings) and `Engines\Semantic\SemanticQueryBuilder` (hybrid, semantic and
+  nearest-neighbour query parameters). The engine keeps its public methods (`filters`,
+  `parseWhereFilter`, `escapeFilterValue`, ...) as delegates, so nothing changes for callers.
+
 ## [1.10.9] - 2026-11-10
 
 ### Changed

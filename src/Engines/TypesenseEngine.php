@@ -2,6 +2,9 @@
 
 namespace Siberfx\Typesense\Engines;
 
+use Siberfx\Typesense\Engines\Filters\FilterBuilder;
+use Siberfx\Typesense\Engines\Semantic\EmbeddingSettings;
+use Siberfx\Typesense\Engines\Semantic\SemanticQueryBuilder;
 use Siberfx\Typesense\Typesense;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
@@ -89,11 +92,11 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             return;
         }
 
-        $settings = $this->hasEmbeddingSettings($models->first())
-            ? $this->embeddingSettings($models->first())
+        $settings = $this->embeddings()->has($models->first())
+            ? $this->embeddings()->settings($models->first())
             : null;
 
-        $documents = $settings !== null && !$this->usesNativeEmbeddings($settings)
+        $documents = $settings !== null && !$this->embeddings()->usesNative($settings)
             ? $this->addEmbeddingsToDocuments($records, $settings)
             : array_column($records, 'document');
 
@@ -101,6 +104,59 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             $models->first(),
             fn ($collection) => $this->typesense->importDocuments($collection, $documents)
         );
+    }
+
+    private function filterBuilder(): FilterBuilder
+    {
+        return new FilterBuilder((bool) ($this->config['escape_filter_values'] ?? false));
+    }
+
+    private function embeddings(): EmbeddingSettings
+    {
+        return new EmbeddingSettings($this->config);
+    }
+
+    private function semanticQueries(): SemanticQueryBuilder
+    {
+        return new SemanticQueryBuilder(
+            $this->embeddings(),
+            fn (array $inputs, array $settings): array => $this->generateEmbeddings($inputs, $settings)
+        );
+    }
+
+    protected function filters(Builder $builder): string
+    {
+        return $this->filterBuilder()->build($builder);
+    }
+
+    public function parseFilterValue(array|string|bool|int|float $value): array|string|bool|int|float
+    {
+        return $this->filterBuilder()->parseFilterValue($value);
+    }
+
+    public static function escapeFilterValue(string|int|float|bool $value): string
+    {
+        return FilterBuilder::escapeFilterValue($value);
+    }
+
+    public function parseWhereFilter(array|string $value, string $key, string $operator = '='): string
+    {
+        return $this->filterBuilder()->parseWhereFilter($value, $key, $operator);
+    }
+
+    public function parseWhereInFilter(array $value, string $key): string
+    {
+        return $this->filterBuilder()->parseWhereInFilter($value, $key);
+    }
+
+    public function parseWhereNotInFilter(array $value, string $key): string
+    {
+        return $this->filterBuilder()->parseWhereNotInFilter($value, $key);
+    }
+
+    protected function embeddingSettings($model): array
+    {
+        return $this->embeddings()->settings($model);
     }
 
     /**
@@ -338,270 +394,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
         // through; `vector` is Scout's precomputed embedding, not a parameter.
         $params = array_merge($params, array_diff_key($builder->options, ['vector' => true]));
 
-        return $this->applySemanticSearchParams($builder, $params);
-    }
-
-    /**
-     * Apply Scout's semantic() / hybrid() builder state to the search params.
-     *
-     * @param \Laravel\Scout\Builder $builder
-     * @param array $params
-     *
-     * @return array
-     */
-    private function applySemanticSearchParams(Builder $builder, array $params): array
-    {
-        $searchOptions = SearchOptions::for($builder);
-
-        if (!$builder->semanticSearch && $builder->hybridSearch === null) {
-            return $params;
-        }
-
-        if ($searchOptions->vectorQuery !== '') {
-            throw new ScoutException('Typesense semantic and hybrid searches cannot be combined with vectorQuery() or nearestNeighbors().');
-        }
-
-        $settings = $this->embeddingSettings($builder->model);
-
-        if ($builder->semanticSearch) {
-            $params = $this->usesNativeEmbeddings($settings)
-                ? $this->applyNativeSemanticQueryBy($params, $settings['attribute'])
-                : array_merge($params, ['q' => '*']);
-        } else {
-            $params = $this->applyHybridQueryBy($params, $settings);
-        }
-
-        if (($vectorQuery = $this->buildSemanticVectorQuery($builder, $settings)) !== null) {
-            $params['vector_query'] = $vectorQuery;
-        }
-
-        // Never ship the (large) embedding back with every hit.
-        $params['exclude_fields'] = $this->appendField($params['exclude_fields'] ?? '', $settings['attribute']);
-
-        return $params;
-    }
-
-    /**
-     * Point a native-embedding semantic search at the embedding field only.
-     *
-     * @param array $params
-     * @param string $attribute
-     *
-     * @return array
-     */
-    private function applyNativeSemanticQueryBy(array $params, string $attribute): array
-    {
-        $params['query_by'] = $attribute;
-
-        // Remote embedders reject prefix searches on embedding fields.
-        $params['prefix'] = false;
-
-        // Per-field lists no longer line up with the single query_by field.
-        if (isset($params['infix']) && str_contains((string) $params['infix'], ',')) {
-            unset($params['infix']);
-        }
-
-        return $params;
-    }
-
-    /**
-     * Prepare query_by (and its per-field params) for a hybrid search.
-     *
-     * @param array $params
-     * @param array $settings
-     *
-     * @return array
-     */
-    private function applyHybridQueryBy(array $params, array $settings): array
-    {
-        $fields = array_filter(array_map('trim', explode(',', (string) ($params['query_by'] ?? ''))));
-
-        if (array_diff($fields, [$settings['attribute']]) === []) {
-            throw new ScoutException('Typesense hybrid searches require at least one keyword field in the [query_by] search parameter.');
-        }
-
-        if (!$this->usesNativeEmbeddings($settings) || in_array($settings['attribute'], $fields, true)) {
-            return $params;
-        }
-
-        $params['query_by'] = implode(',', [...$fields, $settings['attribute']]);
-
-        if (isset($params['infix']) && str_contains((string) $params['infix'], ',')) {
-            $params['infix'] .= ',off';
-        }
-
-        // Prefix search defaults to true, which remote embedders reject on the
-        // embedding field, so it has to become a per-field list.
-        $prefix = $params['prefix'] ?? true;
-
-        if (is_string($prefix) && str_contains($prefix, ',')) {
-            $params['prefix'] = $prefix . ',false';
-        } elseif ($prefix === true || $prefix === 'true') {
-            $params['prefix'] = implode(',', [...array_fill(0, count($fields), 'true'), 'false']);
-        }
-
-        return $params;
-    }
-
-    /**
-     * Build the vector_query for a semantic / hybrid search.
-     *
-     * @param \Laravel\Scout\Builder $builder
-     * @param array $settings
-     *
-     * @return string|null
-     */
-    private function buildSemanticVectorQuery(Builder $builder, array $settings): ?string
-    {
-        if ($this->usesNativeEmbeddings($settings)) {
-            $vector = [];
-        } else {
-            $vector = $builder->options['vector'] ?? $this->generateEmbeddings([$builder->query], $settings)[0];
-
-            if (!is_array($vector) || $vector === []) {
-                throw new ScoutException('The Typesense query [vector] must be a non-empty embedding array.');
-            }
-        }
-
-        $options = [];
-
-        if ($builder->hybridSearch !== null) {
-            $options[] = 'alpha: ' . ($builder->hybridSearch['semantic_weight'] / array_sum($builder->hybridSearch));
-        }
-
-        if ($builder->minimumSimilarity !== null) {
-            $options[] = 'distance_threshold: ' . $this->distanceThreshold($builder->minimumSimilarity);
-        }
-
-        if ($vector === [] && $options === []) {
-            return null;
-        }
-
-        return sprintf(
-            '%s:([%s]%s)',
-            $settings['attribute'],
-            implode(', ', $vector),
-            $options === [] ? '' : ', ' . implode(', ', $options)
-        );
-    }
-
-    /**
-     * Convert a minimum cosine similarity (0..1) into a max vector distance.
-     *
-     * @param mixed $similarity
-     *
-     * @return float
-     */
-    private function distanceThreshold(mixed $similarity): float
-    {
-        if (!is_numeric($similarity) || $similarity < 0 || $similarity > 1) {
-            throw new ScoutException('The minimum similarity must be between 0 and 1.');
-        }
-
-        return 1 - $similarity;
-    }
-
-    /**
-     * Append a field to a comma-separated field list unless already present.
-     *
-     * @param string $fields
-     * @param string $field
-     *
-     * @return string
-     */
-    private function appendField(string $fields, string $field): string
-    {
-        $fields = array_filter(array_map('trim', explode(',', $fields)));
-
-        if (!in_array($field, $fields, true)) {
-            $fields[] = $field;
-        }
-
-        return implode(',', $fields);
-    }
-
-    /**
-     * Get the raw embedding settings for a model.
-     *
-     * A model-level typesenseEmbeddingSettings() method takes precedence over
-     * `scout.typesense.model-settings.{Model}.embedding` (Scout's format).
-     *
-     * @param mixed $model
-     *
-     * @return mixed
-     */
-    private function rawEmbeddingSettings($model): mixed
-    {
-        if (method_exists($model, 'typesenseEmbeddingSettings')
-            && ($settings = $model->typesenseEmbeddingSettings()) !== null) {
-            return $settings;
-        }
-
-        return $this->config['model-settings'][get_class($model)]['embedding'] ?? null;
-    }
-
-    /**
-     * @param mixed $model
-     *
-     * @return bool
-     */
-    private function hasEmbeddingSettings($model): bool
-    {
-        return !empty($this->rawEmbeddingSettings($model));
-    }
-
-    /**
-     * Get the validated embedding settings for a model.
-     *
-     * @param mixed $model
-     *
-     * @return array
-     */
-    protected function embeddingSettings($model): array
-    {
-        $settings = $this->rawEmbeddingSettings($model);
-
-        if (!is_array($settings) || $settings === []) {
-            throw new ScoutException('No Typesense embedding settings have been configured for [' . get_class($model) . '].');
-        }
-
-        if (!isset($settings['attribute']) || !is_string($settings['attribute']) || trim($settings['attribute']) === '') {
-            throw new ScoutException('Typesense embedding settings must contain an [attribute].');
-        }
-
-        $driver = $settings['driver'] ?? 'laravel-ai';
-
-        if (!in_array($driver, ['laravel-ai', 'typesense'], true)) {
-            throw new ScoutException("The [{$driver}] Typesense embedding driver is not supported.");
-        }
-
-        $settings['driver'] = $driver;
-
-        if ($this->usesNativeEmbeddings($settings)) {
-            return $settings;
-        }
-
-        if (!isset($settings['dimensions'])
-            || filter_var($settings['dimensions'], FILTER_VALIDATE_INT) === false
-            || $settings['dimensions'] < 1) {
-            throw new ScoutException('Typesense embedding settings must contain positive [dimensions].');
-        }
-
-        $settings['dimensions'] = (int) $settings['dimensions'];
-
-        return $settings;
-    }
-
-    /**
-     * Whether Typesense generates the embeddings itself (an `embed` field).
-     *
-     * @param array $settings
-     *
-     * @return bool
-     */
-    private function usesNativeEmbeddings(array $settings): bool
-    {
-        return ($settings['driver'] ?? null) === 'typesense';
+        return $this->semanticQueries()->apply($builder, $params, $searchOptions);
     }
 
     /**
@@ -769,186 +562,6 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
         };
 
         return $exception->setMessage((string) $result['error']);
-    }
-
-    /**
-     * Prepare filters.
-     *
-     * @param Builder $builder
-     *
-     * @return string
-     */
-    protected function filters(Builder $builder): string
-    {
-        $escape = (bool) ($this->config['escape_filter_values'] ?? false);
-
-        // Operator arrays such as ['>', 100] are filter syntax, never escaped.
-        $whereValue = fn ($value) => $escape && !is_array($value)
-            ? $this->escapeWhereValue($value)
-            : $this->parseFilterValue($value);
-
-        $listValue = fn (array $values) => $escape
-            ? array_map([$this, 'escapeWhereValue'], $values)
-            : array_map([$this, 'quoteListValue'], $this->parseFilterValue($values));
-
-        // Scout 11 stores where() clauses as ['field', 'operator', 'value']
-        // entries; plain `field => value` pairs are still accepted.
-        $whereFilter = collect($builder->wheres)
-            ->map(fn ($where, $key) => is_array($where) && array_key_exists('field', $where) && array_key_exists('value', $where)
-                ? $this->parseWhereFilter($whereValue($where['value']), $where['field'], $where['operator'] ?? '=')
-                : $this->parseWhereFilter($whereValue($where), $key))
-            ->values()
-            ->implode(' && ');
-
-        $whereInFilter = collect($builder->whereIns)
-            ->map(fn ($value, $key) => $this->parseWhereInFilter($listValue($value), $key))
-            ->values()
-            ->implode(' && ');
-
-        $whereNotInFilter = collect($builder->whereNotIns)
-            ->map(fn ($value, $key) => $this->parseWhereNotInFilter($listValue($value), $key))
-            ->values()
-            ->implode(' && ');
-
-        return collect([$whereFilter, $whereInFilter, $whereNotInFilter])
-            ->filter(static fn (string $filter): bool => $filter !== '')
-            ->implode(' && ');
-    }
-
-    /**
-     * Normalise a filter value before it is rendered into a Typesense filter
-     * string. Booleans become Typesense's literal `true`/`false`, and arrays
-     * are normalised recursively (so operator arrays such as ['>', 100] and
-     * whereIn/whereNotIn value lists are handled consistently).
-     *
-     * @param array|string|bool|int|float $value
-     *
-     * @return array|string|bool|int|float
-     */
-    public function parseFilterValue(array|string|bool|int|float $value): array|string|bool|int|float
-    {
-        if (is_array($value)) {
-            return array_map([$this, 'parseFilterValue'], $value);
-        }
-
-        if (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        }
-
-        return $value;
-    }
-
-    /**
-     * Escape a value for safe use in a Typesense `filter_by` string.
-     *
-     * Strings are wrapped in backticks (inner backticks escaped), so values
-     * containing `&&`, `||`, `,`, `[`, `]` or `:` cannot alter the filter.
-     * Same behaviour as \Typesense\FilterBy::escape() in typesense-php 6.1.
-     *
-     * @param string|int|float|bool $value
-     *
-     * @return string
-     */
-    public static function escapeFilterValue(string|int|float|bool $value): string
-    {
-        return match (true) {
-            is_string($value) => '`' . str_replace('`', '\\`', $value) . '`',
-            is_bool($value) => $value ? 'true' : 'false',
-            default => (string) $value,
-        };
-    }
-
-    /**
-     * Quote a whereIn/whereNotIn list item when it would otherwise break the list.
-     *
-     * Plain values (words, numbers, booleans) stay unquoted, so the common output
-     * is unchanged. A string with a comma, space, bracket or backtick, or an empty
-     * string, is quoted, because `[a,b]` is read as two items.
-     *
-     * @param mixed $value
-     *
-     * @return mixed
-     */
-    private function quoteListValue(mixed $value): mixed
-    {
-        if (is_string($value) && !is_numeric($value)
-            && ($value === '' || preg_match('/[^\w.\-@\/]/u', $value) === 1)) {
-            return static::escapeFilterValue($value);
-        }
-
-        return $value;
-    }
-
-    /**
-     * Escape a where/whereIn value when `scout.typesense.escape_filter_values`
-     * is enabled. Numeric strings (typical of request input) stay unquoted so
-     * they keep matching numeric fields.
-     *
-     * @param string|int|float|bool $value
-     *
-     * @return string
-     */
-    private function escapeWhereValue(string|int|float|bool $value): string
-    {
-        return is_string($value) && is_numeric($value) ? $value : static::escapeFilterValue($value);
-    }
-
-    /**
-     * Parse typesense where filter.
-     *
-     * Passing an array enables comparison/range operators, e.g.
-     * where('price', ['>', 100]) => "price:>100" and
-     * where('price', ['[10..100]']) => "price:[10..100]".
-     * Scout's own operator form works too: where('price', '>', 100).
-     *
-     * @param array|string $value
-     * @param string $key
-     * @param string $operator One of =, !=, <, >, <=, >=.
-     *
-     * @return string
-     */
-    public function parseWhereFilter(array|string $value, string $key, string $operator = '='): string
-    {
-        if (is_array($value)) {
-            return sprintf('%s:%s', $key, implode('', $value));
-        }
-
-        $operator = match ($operator) {
-            '!=', '<>' => ':!=',
-            '<' => ':<',
-            '>' => ':>',
-            '<=' => ':<=',
-            '>=' => ':>=',
-            default => ':=',
-        };
-
-        return sprintf('%s%s%s', $key, $operator, $value);
-    }
-
-    /**
-     * Parse typesense  whereIn filter.
-     *
-     * @param array $value
-     * @param string $key
-     *
-     * @return string
-     */
-    public function parseWhereInFilter(array $value, string $key): string
-    {
-        return sprintf('%s:=%s', $key, '[' . implode(', ', $value) . ']');
-    }
-
-    /**
-     * Parse typesense whereNotIn filter.
-     *
-     * @param array $value
-     * @param string $key
-     *
-     * @return string
-     */
-    public function parseWhereNotInFilter(array $value, string $key): string
-    {
-        return sprintf('%s:!=%s', $key, '[' . implode(', ', $value) . ']');
     }
 
     /**
