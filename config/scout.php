@@ -164,5 +164,10 @@ return [
             'num_retries'                  => env('TYPESENSE_NUM_RETRIES', 3),
             'retry_interval_seconds'       => env('TYPESENSE_RETRY_INTERVAL_SECONDS', 1),
         ],
+
+        // Quote where()/whereIn() values so request input cannot change the
+        // filter_by string (e.g. "a || b:=c"). Set to false only if you pass
+        // raw Typesense filter syntax as where() values on purpose.
+        'escape_filter_values' => env('TYPESENSE_ESCAPE_FILTER_VALUES', true),
     ],
 ];

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-11-10
+
+### Changed
+- The published `config/scout.php` now sets `escape_filter_values` to `true`
+  (env `TYPESENSE_ESCAPE_FILTER_VALUES`), so new installs quote `where()` and
+  `whereIn()` values and request input cannot change `filter_by`. The engine default
+  stays `false`, so existing installs keep their behaviour until they add the key.
+
+### Fixed
+- README: the `config/scout.php` example put `api_key` and `nodes` directly under
+  `typesense`. The package reads them from `typesense.client-settings`, so the example
+  now matches that.
+
 ## [1.10.0] - 2026-11-10
 
 ### Fixed

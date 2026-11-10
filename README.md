@@ -87,6 +87,7 @@ In your `config/scout.php` add:
 ```php
 
 'typesense' => [
+    'client-settings' => [
     'api_key'         => 'abcd',
     'nodes'           => [
       [
@@ -106,6 +107,10 @@ In your `config/scout.php` add:
     'healthcheck_interval_seconds' => 30,    
     'num_retries'                  => 3,
     'retry_interval_seconds'       => 1,
+    ],
+
+    // Quote where()/whereIn() values so request input cannot change the filter.
+    'escape_filter_values' => true,
   ],
 ```
 
@@ -323,8 +328,10 @@ Todo::search('shoes')
 
 Boolean values are rendered as Typesense literals (`true`/`false`) automatically.
 
-Filter values are inserted as-is by default. If they can come from user input,
-enable escaping so a value such as `a && b` cannot change the filter:
+Filter values can come from user input, so escaping protects you: a value such as
+`a || b:=c` must not change the filter. The published `config/scout.php` enables it
+(`TYPESENSE_ESCAPE_FILTER_VALUES`, default `true`). If you installed the package
+before this change, add the key yourself:
 
 ```php
 // config/scout.php
@@ -333,6 +340,9 @@ enable escaping so a value such as `a && b` cannot change the filter:
     'escape_filter_values' => true,
 ],
 ```
+
+With escaping off, values are inserted as-is, so only turn it off if you deliberately
+pass raw Typesense filter syntax to `where()`.
 
 String values are then wrapped in backticks (`` name:=`a && b` ``); numeric
 strings, numbers, booleans and operator arrays such as `['>', 100]` are left

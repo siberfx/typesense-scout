@@ -28,6 +28,17 @@ class ScoutConfigTest extends TestCase
         );
     }
 
+    public function test_the_template_escapes_where_values_by_default(): void
+    {
+        $typesense = $this->config()['typesense'];
+
+        $this->assertArrayHasKey('escape_filter_values', $typesense);
+        $this->assertTrue(
+            $typesense['escape_filter_values'],
+            'New installs must escape where() values so request input cannot change the filter.'
+        );
+    }
+
     public function test_client_settings_contain_connection_details(): void
     {
         $clientSettings = $this->config()['typesense']['client-settings'];
