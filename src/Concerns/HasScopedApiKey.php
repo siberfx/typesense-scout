@@ -2,19 +2,27 @@
 
 namespace Siberfx\Typesense\Concerns;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Siberfx\Typesense\Scout\ScopedSearch;
 use Siberfx\Typesense\Typesense;
 
 trait HasScopedApiKey
 {
     /**
-     * @param $key
-     * @return static
+     * Search this model with a scoped API key. The key applies only to the
+     * search that follows, for example:
+     *
+     *     Todo::setScopedApiKey($key)->search('term')->get();
+     *
+     * @param string $key
+     * @return ScopedSearch
      */
-    public static function setScopedApiKey($key): static
+    public static function setScopedApiKey($key): ScopedSearch
     {
-        app(Typesense::class)->setScopedApiKey($key);
+        $softDelete = in_array(SoftDeletes::class, class_uses_recursive(static::class), true)
+            && config('scout.soft_delete', false);
 
-        return new static;
+        return app(Typesense::class)->scopedSearch(static::class, $key, $softDelete);
     }
 
     /**

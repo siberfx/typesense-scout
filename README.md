@@ -284,6 +284,10 @@ $scopedKey = Todo::generateScopedSearchKey('parent-search-only-key', [
 Todo::setScopedApiKey($scopedKey)->search('todo')->get();
 ```
 
+The scoped key applies only to the search it starts. Later searches in the same
+process, such as the next tenant's request in a queue worker or Octane, keep using
+the default key.
+
 You can also create new API keys server-side:
 
 ```php

@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-10
+
+### Fixed
+- `Model::setScopedApiKey()` no longer changes the search engine for the whole
+  process. The scoped key used to stay active for every later search in the same
+  PHP process (queue workers, Octane, long-running commands), so a later search,
+  for example another tenant's, could run with the wrong key. The key now applies
+  only to the search it starts.
+
+### Changed
+- `Model::setScopedApiKey($key)` returns a `Siberfx\Typesense\Scout\ScopedSearch`,
+  whose `search()` returns the Scout builder. The usual chain
+  `Model::setScopedApiKey($key)->search(...)` is unchanged.
+- `Typesense::setScopedApiKey()` now throws `BadMethodCallException`. Use
+  `Model::setScopedApiKey()` instead. This is a breaking change for code that
+  called the old method, because the old behaviour was the leak above.
+
 ## [1.9.0] - 2026-10-29
 
 ### Added

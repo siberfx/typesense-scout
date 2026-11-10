@@ -2,17 +2,15 @@
 
 namespace Siberfx\Typesense;
 
+use BadMethodCallException;
 use Illuminate\Support\Facades\Config;
-use Laravel\Scout\EngineManager;
 use Typesense\Exceptions\TypesenseClientError;
 use Siberfx\Typesense\Classes\TypesenseDocumentIndexResponse;
+use Siberfx\Typesense\Scout\ScopedSearch;
 use Typesense\Client;
 use Typesense\Collection;
 use Typesense\Document;
-use Laravel\Scout\Builder;
-use Siberfx\Typesense\Mixin\BuilderMixin;
 use Typesense\Exceptions\ObjectNotFound;
-use Siberfx\Typesense\Engines\TypesenseEngine;
 
 /**
  * Class Typesense
@@ -48,29 +46,37 @@ class Typesense
     }
 
     /**
-     * @param $key
-     * @return void
-     * @throws \Illuminate\Contracts\Container\BindingResolutionException
-     * @throws \ReflectionException
+     * Start a search that authenticates with a scoped API key.
+     *
+     * The key applies only to the search returned by ScopedSearch::search();
+     * no process-wide engine is changed.
+     *
+     * @param class-string<\Illuminate\Database\Eloquent\Model> $modelClass
+     * @param string $key
+     * @param bool $softDelete
+     *
      * @throws \Typesense\Exceptions\ConfigError
      */
-    public function setScopedApiKey($key): void
+    public function scopedSearch(string $modelClass, string $key, bool $softDelete = false): ScopedSearch
     {
         $config = Config::get('scout.typesense.client-settings');
         $config['api_key'] = $key;
-        $client = new Client($config);
 
-        $engineManager = app()[EngineManager::class];
+        return new ScopedSearch($modelClass, new Client($config), Config::get('scout.typesense', []), $softDelete);
+    }
 
-        // An already-resolved engine is cached by the manager; without
-        // forgetting it, extend() would never take effect once a search
-        // has run and the scoped key would silently be ignored.
-        $engineManager->forgetDrivers();
-
-        $engineManager->extend('typesense', static function () use ($client) {
-            return new TypesenseEngine(new Typesense($client), Config::get('scout.typesense', []));
-        });
-        Builder::mixin(app()->make(BuilderMixin::class));
+    /**
+     * @deprecated Removed behaviour: this used to replace the Scout engine for the
+     *             whole process, so the key leaked into later searches.
+     *
+     * @throws \BadMethodCallException Always. Use Model::setScopedApiKey($key)->search(...).
+     */
+    public function setScopedApiKey($key): void
+    {
+        throw new BadMethodCallException(
+            'Typesense::setScopedApiKey() was removed because it changed the search engine for the whole process. '
+            . 'Use Model::setScopedApiKey($key)->search(...), which applies the key to that search only.'
+        );
     }
 
     /**
