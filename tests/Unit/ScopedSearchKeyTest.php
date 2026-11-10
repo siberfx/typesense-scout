@@ -2,7 +2,6 @@
 
 namespace Siberfx\Typesense\Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
 use Siberfx\Typesense\Typesense;
 use Typesense\Client;
 
@@ -11,9 +10,10 @@ use Typesense\Client;
  * locally via HMAC (no network call), so a client pointed at a dummy node is
  * sufficient.
  */
-class ScopedSearchKeyTest extends TestCase
+
+trait ScopedSearchKeyTestHelpers
 {
-    private function typesense(): Typesense
+    protected function typesense(): Typesense
     {
         $client = new Client([
             'api_key' => 'parent-search-key',
@@ -25,32 +25,29 @@ class ScopedSearchKeyTest extends TestCase
 
         return new Typesense($client);
     }
-
-    public function test_generates_a_deterministic_scoped_key_embedding_parameters(): void
-    {
-        $params = ['filter_by' => 'company_id:42'];
-
-        $scoped = $this->typesense()->generateScopedSearchKey('parent-search-key', $params);
-
-        $this->assertNotEmpty($scoped);
-
-        // The scoped key is base64; once decoded it must embed the JSON params.
-        $decoded = base64_decode($scoped);
-        $this->assertStringContainsString('filter_by', $decoded);
-        $this->assertStringContainsString('company_id:42', $decoded);
-
-        // Same inputs must always yield the same key.
-        $this->assertSame(
-            $scoped,
-            $this->typesense()->generateScopedSearchKey('parent-search-key', $params)
-        );
-    }
-
-    public function test_different_parameters_produce_different_keys(): void
-    {
-        $a = $this->typesense()->generateScopedSearchKey('parent-search-key', ['filter_by' => 'company_id:1']);
-        $b = $this->typesense()->generateScopedSearchKey('parent-search-key', ['filter_by' => 'company_id:2']);
-
-        $this->assertNotSame($a, $b);
-    }
 }
+
+uses(ScopedSearchKeyTestHelpers::class);
+
+test('generates a deterministic scoped key embedding parameters', function () {
+    $params = ['filter_by' => 'company_id:42'];
+
+    $scoped = $this->typesense()->generateScopedSearchKey('parent-search-key', $params);
+
+    expect($scoped)->not->toBeEmpty();
+
+    // The scoped key is base64; once decoded it must embed the JSON params.
+    $decoded = base64_decode($scoped);
+    expect($decoded)->toContain('filter_by');
+    expect($decoded)->toContain('company_id:42');
+
+    // Same inputs must always yield the same key.
+    expect($this->typesense()->generateScopedSearchKey('parent-search-key', $params))->toBe($scoped);
+});
+
+test('different parameters produce different keys', function () {
+    $a = $this->typesense()->generateScopedSearchKey('parent-search-key', ['filter_by' => 'company_id:1']);
+    $b = $this->typesense()->generateScopedSearchKey('parent-search-key', ['filter_by' => 'company_id:2']);
+
+    expect($b)->not->toBe($a);
+});

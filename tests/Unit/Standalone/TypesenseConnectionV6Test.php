@@ -2,16 +2,15 @@
 
 namespace Siberfx\Typesense\Tests\Unit\Standalone;
 
-use PHPUnit\Framework\TestCase;
 use Siberfx\Typesense\Standalone\TypesenseConnection;
 use Typesense\AnalyticsV1;
 use Typesense\Client;
 use Typesense\CurationSets;
 use Typesense\SynonymSets;
 
-class TypesenseConnectionV6Test extends TestCase
+trait TypesenseConnectionV6TestHelpers
 {
-    private function connection(): TypesenseConnection
+    protected function connection(): TypesenseConnection
     {
         $client = new Client([
             'api_key' => 'xyz',
@@ -20,19 +19,18 @@ class TypesenseConnectionV6Test extends TestCase
 
         return new TypesenseConnection($client);
     }
-
-    public function test_exposes_global_synonym_sets(): void
-    {
-        $this->assertInstanceOf(SynonymSets::class, $this->connection()->synonymSets());
-    }
-
-    public function test_exposes_global_curation_sets(): void
-    {
-        $this->assertInstanceOf(CurationSets::class, $this->connection()->curationSets());
-    }
-
-    public function test_exposes_analytics_v1(): void
-    {
-        $this->assertInstanceOf(AnalyticsV1::class, $this->connection()->analyticsV1());
-    }
 }
+
+uses(TypesenseConnectionV6TestHelpers::class);
+
+test('exposes global synonym sets', function () {
+    expect($this->connection()->synonymSets())->toBeInstanceOf(SynonymSets::class);
+});
+
+test('exposes global curation sets', function () {
+    expect($this->connection()->curationSets())->toBeInstanceOf(CurationSets::class);
+});
+
+test('exposes analytics v1', function () {
+    expect($this->connection()->analyticsV1())->toBeInstanceOf(AnalyticsV1::class);
+});

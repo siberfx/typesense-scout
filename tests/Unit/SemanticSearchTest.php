@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Builder;
 use Laravel\Scout\Contracts\SupportsSemanticSearch;
 use Laravel\Scout\Exceptions\ScoutException;
-use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Siberfx\Typesense\Engines\TypesenseEngine;
 use Siberfx\Typesense\Typesense;
@@ -17,12 +16,17 @@ use Typesense\Collection;
  * Scout semantic() / hybrid() support, ported from laravel/scout 11.7's
  * TypesenseEngine tests and adapted to this engine.
  */
-class SemanticSearchTest extends TestCase
+
+trait SemanticSearchTestHelpers
 {
+    protected const GENERATED = ['driver' => 'laravel-ai', 'attribute' => 'embedding', 'dimensions' => 2];
+
+    protected const NATIVE = ['driver' => 'typesense', 'attribute' => 'embedding'];
+
     /**
      * An engine whose embedding generation is faked and recorded.
      */
-    private function engine(array $embedding, array $config = [], ?Typesense $typesense = null): TypesenseEngine
+    protected function engine(array $embedding, array $config = [], ?Typesense $typesense = null): TypesenseEngine
     {
         $typesense ??= $this->createStub(Typesense::class);
 
@@ -38,7 +42,7 @@ class SemanticSearchTest extends TestCase
         };
     }
 
-    private function params(TypesenseEngine $engine, Builder $builder): array
+    protected function params(TypesenseEngine $engine, Builder $builder): array
     {
         $ref = new ReflectionClass(TypesenseEngine::class);
 
@@ -48,190 +52,169 @@ class SemanticSearchTest extends TestCase
         );
     }
 
-    private function builder(string $query, array $queryBy = ['name']): Builder
+    protected function builder(string $query, array $queryBy = ['name']): Builder
     {
         $model = new SemanticModel();
         $model->queryBy = $queryBy;
 
         return new Builder($model, $query);
     }
+}
 
-    private const GENERATED = ['driver' => 'laravel-ai', 'attribute' => 'embedding', 'dimensions' => 2];
+uses(SemanticSearchTestHelpers::class);
 
-    private const NATIVE = ['driver' => 'typesense', 'attribute' => 'embedding'];
+test('engine supports semantic search', function () {
+    expect($this->engine(self::NATIVE))->toBeInstanceOf(SupportsSemanticSearch::class);
+});
 
-    public function test_engine_supports_semantic_search(): void
-    {
-        $this->assertInstanceOf(SupportsSemanticSearch::class, $this->engine(self::NATIVE));
-    }
+test('semantic search generates a query vector', function () {
+    $engine = $this->engine(self::GENERATED);
 
-    public function test_semantic_search_generates_a_query_vector(): void
-    {
-        $engine = $this->engine(self::GENERATED);
+    $params = $this->params($engine, $this->builder('red shoes')->semantic(0.7));
 
-        $params = $this->params($engine, $this->builder('red shoes')->semantic(0.7));
+    expect($params['q'])->toBe('*');
+    expect($params['query_by'])->toBe('name');
+    expect($params['vector_query'])->toBe('embedding:([0.09, 0.5], distance_threshold: 0.3)');
+    expect($params['exclude_fields'])->toBe('embedding');
+    expect($engine->embedded)->toBe([['red shoes']]);
+});
 
-        $this->assertSame('*', $params['q']);
-        $this->assertSame('name', $params['query_by']);
-        $this->assertSame('embedding:([0.09, 0.5], distance_threshold: 0.3)', $params['vector_query']);
-        $this->assertSame('embedding', $params['exclude_fields']);
-        $this->assertSame([['red shoes']], $engine->embedded);
-    }
+test('hybrid search accepts a precomputed query vector and normalizes weights', function () {
+    $engine = $this->engine(self::GENERATED);
 
-    public function test_hybrid_search_accepts_a_precomputed_query_vector_and_normalizes_weights(): void
-    {
-        $engine = $this->engine(self::GENERATED);
+    $builder = $this->builder('red shoes')->options(['vector' => [0.4, 0.6]])->hybrid(1, 2);
+    $params = $this->params($engine, $builder);
 
-        $builder = $this->builder('red shoes')->options(['vector' => [0.4, 0.6]])->hybrid(1, 2);
-        $params = $this->params($engine, $builder);
+    expect($params['q'])->toBe('red shoes');
+    expect($params['query_by'])->toBe('name');
+    expect($params['vector_query'])->toBe('embedding:([0.4, 0.6], alpha: ' . (2 / 3) . ')');
+    expect($engine->embedded)->toBe([]);
+});
 
-        $this->assertSame('red shoes', $params['q']);
-        $this->assertSame('name', $params['query_by']);
-        $this->assertSame('embedding:([0.4, 0.6], alpha: ' . (2 / 3) . ')', $params['vector_query']);
-        $this->assertSame([], $engine->embedded);
-    }
+test('semantic search with native embeddings queries the embedding field', function () {
+    $params = $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->semantic());
 
-    public function test_semantic_search_with_native_embeddings_queries_the_embedding_field(): void
-    {
-        $params = $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->semantic());
+    expect($params['q'])->toBe('red shoes');
+    expect($params['query_by'])->toBe('embedding');
+    expect($params['prefix'])->toBeFalse();
+    expect($params)->not->toHaveKey('vector_query');
+    expect($params['exclude_fields'])->toBe('embedding');
+});
 
-        $this->assertSame('red shoes', $params['q']);
-        $this->assertSame('embedding', $params['query_by']);
-        $this->assertFalse($params['prefix']);
-        $this->assertArrayNotHasKey('vector_query', $params);
-        $this->assertSame('embedding', $params['exclude_fields']);
-    }
+test('semantic search with native embeddings applies a distance threshold', function () {
+    $params = $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->semantic(0.5));
 
-    public function test_semantic_search_with_native_embeddings_applies_a_distance_threshold(): void
-    {
-        $params = $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->semantic(0.5));
+    expect($params['vector_query'])->toBe('embedding:([], distance_threshold: 0.5)');
+});
 
-        $this->assertSame('embedding:([], distance_threshold: 0.5)', $params['vector_query']);
-    }
+test('hybrid search with native embeddings appends the embedding field', function () {
+    $params = $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->hybrid());
 
-    public function test_hybrid_search_with_native_embeddings_appends_the_embedding_field(): void
-    {
-        $params = $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->hybrid());
+    expect($params['query_by'])->toBe('name,embedding');
+    expect($params['prefix'])->toBe('true,false');
+    expect($params['vector_query'])->toBe('embedding:([], alpha: 0.5)');
+});
 
-        $this->assertSame('name,embedding', $params['query_by']);
-        $this->assertSame('true,false', $params['prefix']);
-        $this->assertSame('embedding:([], alpha: 0.5)', $params['vector_query']);
-    }
+test('hybrid search with native embeddings extends per field lists', function () {
+    $builder = $this->builder('red shoes', ['name', 'sku'])->hybrid();
+    $builder->setPrefix('true,false')->setInfix('always,off');
 
-    public function test_hybrid_search_with_native_embeddings_extends_per_field_lists(): void
-    {
-        $builder = $this->builder('red shoes', ['name', 'sku'])->hybrid();
-        $builder->setPrefix('true,false')->setInfix('always,off');
+    $params = $this->params($this->engine(self::NATIVE), $builder);
 
-        $params = $this->params($this->engine(self::NATIVE), $builder);
+    expect($params['query_by'])->toBe('name,sku,embedding');
+    expect($params['prefix'])->toBe('true,false,false');
+    expect($params['infix'])->toBe('always,off,off');
+});
 
-        $this->assertSame('name,sku,embedding', $params['query_by']);
-        $this->assertSame('true,false,false', $params['prefix']);
-        $this->assertSame('always,off,off', $params['infix']);
-    }
+test('existing exclude fields are kept', function () {
+    $builder = $this->builder('red shoes')->semantic()->setExcludeFields(['secret']);
 
-    public function test_existing_exclude_fields_are_kept(): void
-    {
-        $builder = $this->builder('red shoes')->semantic()->setExcludeFields(['secret']);
+    $params = $this->params($this->engine(self::NATIVE), $builder);
 
-        $params = $this->params($this->engine(self::NATIVE), $builder);
+    expect($params['exclude_fields'])->toBe('secret,embedding');
+});
 
-        $this->assertSame('secret,embedding', $params['exclude_fields']);
-    }
-
-    public function test_hybrid_search_requires_a_keyword_field(): void
-    {
-        $this->expectException(ScoutException::class);
-        $this->expectExceptionMessage('Typesense hybrid searches require at least one keyword field in the [query_by] search parameter.');
-
+test('hybrid search requires a keyword field', function () {
+    expect(function () {
         $this->params($this->engine(self::NATIVE), $this->builder('red shoes', ['embedding'])->hybrid());
-    }
+    })->toThrow(ScoutException::class, 'Typesense hybrid searches require at least one keyword field in the [query_by] search parameter.');
+});
 
-    public function test_semantic_search_cannot_be_combined_with_a_manual_vector_query(): void
-    {
+test('semantic search cannot be combined with a manual vector query', function () {
+    expect(function () {
         $builder = $this->builder('red shoes')->semantic()->nearestNeighbors('embedding', [0.1]);
 
-        $this->expectException(ScoutException::class);
-        $this->expectExceptionMessage('cannot be combined with vectorQuery() or nearestNeighbors()');
 
         $this->params($this->engine(self::NATIVE), $builder);
-    }
+    })->toThrow(ScoutException::class, 'cannot be combined with vectorQuery() or nearestNeighbors()');
+});
 
-    public function test_semantic_search_requires_embedding_settings(): void
-    {
+test('semantic search requires embedding settings', function () {
+    expect(function () {
         $engine = new TypesenseEngine($this->createStub(Typesense::class));
 
-        $this->expectException(ScoutException::class);
-        $this->expectExceptionMessage('No Typesense embedding settings have been configured for [' . SemanticModel::class . '].');
 
         $this->params($engine, $this->builder('red shoes')->semantic());
-    }
+    })->toThrow(ScoutException::class, 'No Typesense embedding settings have been configured for [' . SemanticModel::class . '].');
+});
 
-    public function test_generated_embeddings_require_dimensions(): void
-    {
-        $this->expectException(ScoutException::class);
-        $this->expectExceptionMessage('Typesense embedding settings must contain positive [dimensions].');
-
+test('generated embeddings require dimensions', function () {
+    expect(function () {
         $this->params($this->engine(['attribute' => 'embedding']), $this->builder('red shoes')->semantic());
-    }
+    })->toThrow(ScoutException::class, 'Typesense embedding settings must contain positive [dimensions].');
+});
 
-    public function test_minimum_similarity_must_be_between_zero_and_one(): void
-    {
-        $this->expectException(ScoutException::class);
-        $this->expectExceptionMessage('The minimum similarity must be between 0 and 1.');
-
+test('minimum similarity must be between zero and one', function () {
+    expect(function () {
         $this->params($this->engine(self::NATIVE), $this->builder('red shoes')->semantic(1.5));
-    }
+    })->toThrow(ScoutException::class, 'The minimum similarity must be between 0 and 1.');
+});
 
-    public function test_model_method_settings_take_precedence_over_config(): void
-    {
-        $engine = $this->engine(['attribute' => 'from_config', 'driver' => 'typesense']);
+test('model method settings take precedence over config', function () {
+    $engine = $this->engine(['attribute' => 'from_config', 'driver' => 'typesense']);
 
-        $builder = $this->builder('red shoes')->semantic();
-        $builder->model->embeddingSettings = ['attribute' => 'from_model', 'driver' => 'typesense'];
+    $builder = $this->builder('red shoes')->semantic();
+    $builder->model->embeddingSettings = ['attribute' => 'from_model', 'driver' => 'typesense'];
 
-        $this->assertSame('from_model', $this->params($engine, $builder)['query_by']);
-    }
+    expect($this->params($engine, $builder)['query_by'])->toBe('from_model');
+});
 
-    public function test_update_adds_precomputed_and_generated_embeddings_to_documents(): void
-    {
-        $typesense = $this->createMock(Typesense::class);
-        $collection = $this->createStub(Collection::class);
-        $typesense->method('getCollectionIndex')->willReturn($collection);
-        $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
-        $typesense->expects($this->once())
-            ->method('importDocuments')
-            ->with($this->anything(), [
-                ['id' => 1, 'name' => 'abcd', 'embedding' => [0.04, 0.5]],
-                ['id' => 2, 'name' => 'precomputed', 'embedding' => [0.9, 0.1]],
-            ]);
+test('update adds precomputed and generated embeddings to documents', function () {
+    $typesense = $this->createMock(Typesense::class);
+    $collection = $this->createStub(Collection::class);
+    $typesense->method('getCollectionIndex')->willReturn($collection);
+    $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
+    $typesense->expects($this->once())
+        ->method('importDocuments')
+        ->with($this->anything(), [
+            ['id' => 1, 'name' => 'abcd', 'embedding' => [0.04, 0.5]],
+            ['id' => 2, 'name' => 'precomputed', 'embedding' => [0.9, 0.1]],
+        ]);
 
-        $engine = $this->engine(self::GENERATED, [], $typesense);
+    $engine = $this->engine(self::GENERATED, [], $typesense);
 
-        $engine->update(new EloquentCollection([
-            SemanticModel::fake(1, 'abcd'),
-            SemanticModel::fake(2, 'precomputed', [0.9, 0.1]),
-        ]));
+    $engine->update(new EloquentCollection([
+        SemanticModel::fake(1, 'abcd'),
+        SemanticModel::fake(2, 'precomputed', [0.9, 0.1]),
+    ]));
 
-        $this->assertSame([['abcd']], $engine->embedded);
-    }
+    expect($engine->embedded)->toBe([['abcd']]);
+});
 
-    public function test_update_does_not_generate_embeddings_with_native_driver(): void
-    {
-        $typesense = $this->createMock(Typesense::class);
-        $collection = $this->createStub(Collection::class);
-        $typesense->method('getCollectionIndex')->willReturn($collection);
-        $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
-        $typesense->expects($this->once())
-            ->method('importDocuments')
-            ->with($this->anything(), [['id' => 1, 'name' => 'abcd']]);
+test('update does not generate embeddings with native driver', function () {
+    $typesense = $this->createMock(Typesense::class);
+    $collection = $this->createStub(Collection::class);
+    $typesense->method('getCollectionIndex')->willReturn($collection);
+    $typesense->method('withCollection')->willReturnCallback(fn ($model, $operation) => $operation($collection));
+    $typesense->expects($this->once())
+        ->method('importDocuments')
+        ->with($this->anything(), [['id' => 1, 'name' => 'abcd']]);
 
-        $engine = $this->engine(self::NATIVE, [], $typesense);
-        $engine->update(new EloquentCollection([SemanticModel::fake(1, 'abcd')]));
+    $engine = $this->engine(self::NATIVE, [], $typesense);
+    $engine->update(new EloquentCollection([SemanticModel::fake(1, 'abcd')]));
 
-        $this->assertSame([], $engine->embedded);
-    }
-}
+    expect($engine->embedded)->toBe([]);
+});
 
 class SemanticModel extends Model
 {

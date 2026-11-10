@@ -2,14 +2,13 @@
 
 namespace Siberfx\Typesense\Tests\Unit\Standalone;
 
-use PHPUnit\Framework\TestCase;
 use Siberfx\Typesense\Standalone\DocumentActions;
 use Siberfx\Typesense\Standalone\TypesenseConnection;
 use Typesense\Client;
 
-class TypesenseConnectionTest extends TestCase
+trait TypesenseConnectionTestHelpers
 {
-    private function connection(): TypesenseConnection
+    protected function connection(): TypesenseConnection
     {
         $client = new Client([
             'api_key' => 'xyz',
@@ -18,23 +17,23 @@ class TypesenseConnectionTest extends TestCase
 
         return new TypesenseConnection($client);
     }
-
-    public function test_client_returns_injected_client(): void
-    {
-        $client = new Client([
-            'api_key' => 'xyz',
-            'nodes' => [['host' => 'localhost', 'port' => '8108', 'protocol' => 'http']],
-        ]);
-        $connection = new TypesenseConnection($client);
-
-        $this->assertSame($client, $connection->client());
-    }
-
-    public function test_documents_returns_bound_document_actions(): void
-    {
-        $actions = $this->connection()->documents('books');
-
-        $this->assertInstanceOf(DocumentActions::class, $actions);
-        $this->assertSame('books', $actions->collection());
-    }
 }
+
+uses(TypesenseConnectionTestHelpers::class);
+
+test('client returns injected client', function () {
+    $client = new Client([
+        'api_key' => 'xyz',
+        'nodes' => [['host' => 'localhost', 'port' => '8108', 'protocol' => 'http']],
+    ]);
+    $connection = new TypesenseConnection($client);
+
+    expect($connection->client())->toBe($client);
+});
+
+test('documents returns bound document actions', function () {
+    $actions = $this->connection()->documents('books');
+
+    expect($actions)->toBeInstanceOf(DocumentActions::class);
+    expect($actions->collection())->toBe('books');
+});

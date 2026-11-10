@@ -4,9 +4,14 @@ namespace Siberfx\Typesense\Tests\Integration;
 
 use Siberfx\Typesense\Standalone\TypesenseManager;
 
-class StandaloneV6IntegrationTest extends IntegrationTestCase
+uses(IntegrationServer::class);
+
+beforeEach(function () {
+    $this->connectToIntegrationServer();
+});
+trait StandaloneV6IntegrationTestHelpers
 {
-    private function connection()
+    protected function connection()
     {
         return TypesenseManager::fromConfig([
             'default' => 'default',
@@ -24,7 +29,7 @@ class StandaloneV6IntegrationTest extends IntegrationTestCase
         ])->connection();
     }
 
-    private function deleteSynonymSet(string $name): void
+    protected function deleteSynonymSet(string $name): void
     {
         try {
             $this->client->getSynonymSets()[$name]->delete();
@@ -33,7 +38,7 @@ class StandaloneV6IntegrationTest extends IntegrationTestCase
         }
     }
 
-    private function deleteCurationSet(string $name): void
+    protected function deleteCurationSet(string $name): void
     {
         try {
             $this->client->getCurationSets()[$name]->delete();
@@ -41,48 +46,48 @@ class StandaloneV6IntegrationTest extends IntegrationTestCase
             // not there — nothing to clean up
         }
     }
-
-    public function test_global_synonym_sets_lifecycle(): void
-    {
-        $conn = $this->connection();
-        $name = 'standalone_syn';
-        $this->deleteSynonymSet($name);
-
-        $conn->synonymSets()->upsert($name, [
-            'items' => [
-                ['id' => 'coats', 'synonyms' => ['blazer', 'coat', 'jacket']],
-            ],
-        ]);
-
-        $all = $conn->synonymSets()->retrieve();
-        $this->assertNotEmpty($all);
-
-        $one = $conn->synonymSets()[$name]->retrieve();
-        $this->assertSame($name, $one['name'] ?? $name);
-
-        $this->deleteSynonymSet($name);
-    }
-
-    public function test_global_curation_sets_lifecycle(): void
-    {
-        $conn = $this->connection();
-        $name = 'standalone_cur';
-        $this->deleteCurationSet($name);
-
-        $conn->curationSets()->upsert($name, [
-            'items' => [
-                [
-                    'id'       => 'promo',
-                    'rule'     => ['query' => 'apple', 'match' => 'exact'],
-                    'includes' => [['id' => '422', 'position' => 1]],
-                    'excludes' => [['id' => '287']],
-                ],
-            ],
-        ]);
-
-        $all = $conn->curationSets()->retrieve();
-        $this->assertNotEmpty($all);
-
-        $this->deleteCurationSet($name);
-    }
 }
+
+uses(StandaloneV6IntegrationTestHelpers::class);
+
+test('global synonym sets lifecycle', function () {
+    $conn = $this->connection();
+    $name = 'standalone_syn';
+    $this->deleteSynonymSet($name);
+
+    $conn->synonymSets()->upsert($name, [
+        'items' => [
+            ['id' => 'coats', 'synonyms' => ['blazer', 'coat', 'jacket']],
+        ],
+    ]);
+
+    $all = $conn->synonymSets()->retrieve();
+    expect($all)->not->toBeEmpty();
+
+    $one = $conn->synonymSets()[$name]->retrieve();
+    expect($one['name'] ?? $name)->toBe($name);
+
+    $this->deleteSynonymSet($name);
+});
+
+test('global curation sets lifecycle', function () {
+    $conn = $this->connection();
+    $name = 'standalone_cur';
+    $this->deleteCurationSet($name);
+
+    $conn->curationSets()->upsert($name, [
+        'items' => [
+            [
+                'id'       => 'promo',
+                'rule'     => ['query' => 'apple', 'match' => 'exact'],
+                'includes' => [['id' => '422', 'position' => 1]],
+                'excludes' => [['id' => '287']],
+            ],
+        ],
+    ]);
+
+    $all = $conn->curationSets()->retrieve();
+    expect($all)->not->toBeEmpty();
+
+    $this->deleteCurationSet($name);
+});

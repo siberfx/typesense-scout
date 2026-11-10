@@ -62,7 +62,7 @@ jobs:
           exit 1
 
       - name: Run tests
-        run: vendor/bin/phpunit
+        run: vendor/bin/pest
         env:
           TYPESENSE_HOST: localhost
           TYPESENSE_PORT: 8108

@@ -6,7 +6,6 @@ use BadMethodCallException;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Builder;
-use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use Siberfx\Typesense\Engines\TypesenseEngine;
 use Siberfx\Typesense\Scout\ScopedSearch;
@@ -21,9 +20,10 @@ class ScopedSearchStubModel extends Model
  * A scoped search key must apply to the search it was set for, never to other
  * searches in the same process (queue workers, Octane, long-running commands).
  */
-class ScopedSearchTest extends TestCase
+
+trait ScopedSearchTestHelpers
 {
-    private function client(string $apiKey): Client
+    protected function client(string $apiKey): Client
     {
         return new Client([
             'api_key' => $apiKey,
@@ -34,7 +34,7 @@ class ScopedSearchTest extends TestCase
         ]);
     }
 
-    private function scoped(string $apiKey, bool $softDelete = false): ScopedSearch
+    protected function scoped(string $apiKey, bool $softDelete = false): ScopedSearch
     {
         return new ScopedSearch(ScopedSearchStubModel::class, $this->client($apiKey), [], $softDelete);
     }
@@ -42,12 +42,12 @@ class ScopedSearchTest extends TestCase
     /**
      * The engine Scout would use to execute this builder (Builder::engine() is protected).
      */
-    private function engineOf(Builder $builder): TypesenseEngine
+    protected function engineOf(Builder $builder): TypesenseEngine
     {
         return Closure::bind(fn () => $this->engine(), $builder, Builder::class)();
     }
 
-    private function apiKeyOf(TypesenseEngine $engine): string
+    protected function apiKeyOf(TypesenseEngine $engine): string
     {
         $typesense = (new ReflectionProperty(TypesenseEngine::class, 'typesense'))->getValue($engine);
         $client = $typesense->getClient();
@@ -55,49 +55,46 @@ class ScopedSearchTest extends TestCase
 
         return $configuration->getApiKey();
     }
+}
 
-    public function test_search_uses_its_own_scoped_key(): void
-    {
-        $builder = $this->scoped('tenant-a-key')->search('todo');
+uses(ScopedSearchTestHelpers::class);
 
-        $this->assertInstanceOf(Builder::class, $builder);
-        $this->assertSame('tenant-a-key', $this->apiKeyOf($this->engineOf($builder)));
-    }
+test('search uses its own scoped key', function () {
+    $builder = $this->scoped('tenant-a-key')->search('todo');
 
-    public function test_scoped_keys_do_not_leak_between_searches(): void
-    {
-        $first = $this->engineOf($this->scoped('tenant-a-key')->search('todo'));
-        $second = $this->engineOf($this->scoped('tenant-b-key')->search('todo'));
+    expect($builder)->toBeInstanceOf(Builder::class);
+    expect($this->apiKeyOf($this->engineOf($builder)))->toBe('tenant-a-key');
+});
 
-        $this->assertSame('tenant-a-key', $this->apiKeyOf($first));
-        $this->assertSame('tenant-b-key', $this->apiKeyOf($second));
-        $this->assertNotSame($first, $second);
-    }
+test('scoped keys do not leak between searches', function () {
+    $first = $this->engineOf($this->scoped('tenant-a-key')->search('todo'));
+    $second = $this->engineOf($this->scoped('tenant-b-key')->search('todo'));
 
-    public function test_a_later_scoped_search_does_not_change_an_earlier_builder(): void
-    {
-        $earlier = $this->scoped('tenant-a-key')->search('todo');
-        $this->scoped('tenant-b-key')->search('todo');
+    expect($this->apiKeyOf($first))->toBe('tenant-a-key');
+    expect($this->apiKeyOf($second))->toBe('tenant-b-key');
+    expect($second)->not->toBe($first);
+});
 
-        $this->assertSame('tenant-a-key', $this->apiKeyOf($this->engineOf($earlier)));
-    }
+test('a later scoped search does not change an earlier builder', function () {
+    $earlier = $this->scoped('tenant-a-key')->search('todo');
+    $this->scoped('tenant-b-key')->search('todo');
 
-    public function test_soft_delete_flag_is_applied_to_the_builder(): void
-    {
-        $withoutSoftDelete = $this->scoped('tenant-a-key', false)->search('todo');
-        $withSoftDelete = $this->scoped('tenant-a-key', true)->search('todo');
+    expect($this->apiKeyOf($this->engineOf($earlier)))->toBe('tenant-a-key');
+});
 
-        $this->assertCount(0, $withoutSoftDelete->wheres);
-        $this->assertCount(1, $withSoftDelete->wheres);
-    }
+test('soft delete flag is applied to the builder', function () {
+    $withoutSoftDelete = $this->scoped('tenant-a-key', false)->search('todo');
+    $withSoftDelete = $this->scoped('tenant-a-key', true)->search('todo');
 
-    public function test_the_facade_no_longer_changes_the_process_wide_engine(): void
-    {
+    expect($withoutSoftDelete->wheres)->toHaveCount(0);
+    expect($withSoftDelete->wheres)->toHaveCount(1);
+});
+
+test('the facade no longer changes the process wide engine', function () {
+    expect(function () {
         $typesense = new Typesense($this->client('parent-key'));
 
-        $this->expectException(BadMethodCallException::class);
-        $this->expectExceptionMessage('setScopedApiKey');
 
         $typesense->setScopedApiKey('tenant-key');
-    }
-}
+    })->toThrow(BadMethodCallException::class, 'setScopedApiKey');
+});

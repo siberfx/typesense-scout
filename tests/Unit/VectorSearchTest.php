@@ -3,21 +3,21 @@
 namespace Siberfx\Typesense\Tests\Unit;
 
 use Laravel\Scout\Builder;
-use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Siberfx\Typesense\Engines\TypesenseEngine;
 
 /**
  * Tests for vector / hybrid semantic search parameter building.
  */
-class VectorSearchTest extends TestCase
+
+trait VectorSearchTestHelpers
 {
-    private function engine(): TypesenseEngine
+    protected function engine(): TypesenseEngine
     {
         return (new ReflectionClass(TypesenseEngine::class))->newInstanceWithoutConstructor();
     }
 
-    private function builder(string $query): Builder
+    protected function builder(string $query): Builder
     {
         // buildSearchParams() calls $builder->model->typesenseQueryBy().
         $model = new class {
@@ -30,56 +30,50 @@ class VectorSearchTest extends TestCase
         return new Builder($model, $query);
     }
 
-    private function buildParams(TypesenseEngine $engine, Builder $builder): array
+    protected function buildParams(TypesenseEngine $engine, Builder $builder): array
     {
         $method = (new ReflectionClass(TypesenseEngine::class))->getMethod('buildSearchParams');
 
         return $method->invoke($engine, $builder, 1, 10);
     }
-
-    public function test_no_vector_query_when_unset(): void
-    {
-        $params = $this->buildParams($this->engine(), $this->builder('shoes'));
-
-        $this->assertArrayNotHasKey('vector_query', $params);
-    }
-
-    public function test_raw_vector_query_is_passed_through(): void
-    {
-        $builder = $this->builder('*')->vectorQuery('embedding:([0.1, 0.2], k:5)');
-
-        $params = $this->buildParams($this->engine(), $builder);
-
-        $this->assertSame('embedding:([0.1, 0.2], k:5)', $params['vector_query']);
-    }
-
-    public function test_nearest_neighbors_builds_basic_query(): void
-    {
-        $builder = $this->builder('*')->nearestNeighbors('embedding', [0.1, 0.2, 0.3], 10);
-
-        $params = $this->buildParams($this->engine(), $builder);
-
-        $this->assertSame('embedding:([0.1, 0.2, 0.3], k:10)', $params['vector_query']);
-    }
-
-    public function test_nearest_neighbors_includes_distance_threshold_and_alpha(): void
-    {
-        $builder = $this->builder('hybrid query')->nearestNeighbors('embedding', [0.5, 0.6], 8, 0.3, 0.4);
-
-        $params = $this->buildParams($this->engine(), $builder);
-
-        $this->assertSame(
-            'embedding:([0.5, 0.6], k:8, distance_threshold:0.3, alpha:0.4)',
-            $params['vector_query']
-        );
-        // Hybrid: the text query is preserved alongside the vector query.
-        $this->assertSame('hybrid query', $params['q']);
-    }
-
-    public function test_nearest_neighbors_returns_the_builder_for_chaining(): void
-    {
-        $builder = $this->builder('*');
-
-        $this->assertSame($builder, $builder->nearestNeighbors('embedding', [0.1], 3));
-    }
 }
+
+uses(VectorSearchTestHelpers::class);
+
+test('no vector query when unset', function () {
+    $params = $this->buildParams($this->engine(), $this->builder('shoes'));
+
+    expect($params)->not->toHaveKey('vector_query');
+});
+
+test('raw vector query is passed through', function () {
+    $builder = $this->builder('*')->vectorQuery('embedding:([0.1, 0.2], k:5)');
+
+    $params = $this->buildParams($this->engine(), $builder);
+
+    expect($params['vector_query'])->toBe('embedding:([0.1, 0.2], k:5)');
+});
+
+test('nearest neighbors builds basic query', function () {
+    $builder = $this->builder('*')->nearestNeighbors('embedding', [0.1, 0.2, 0.3], 10);
+
+    $params = $this->buildParams($this->engine(), $builder);
+
+    expect($params['vector_query'])->toBe('embedding:([0.1, 0.2, 0.3], k:10)');
+});
+
+test('nearest neighbors includes distance threshold and alpha', function () {
+    $builder = $this->builder('hybrid query')->nearestNeighbors('embedding', [0.5, 0.6], 8, 0.3, 0.4);
+
+    $params = $this->buildParams($this->engine(), $builder);
+
+    expect($params['vector_query'])->toBe('embedding:([0.5, 0.6], k:8, distance_threshold:0.3, alpha:0.4)');
+    // Hybrid: the text query is preserved alongside the vector query.
+    expect($params['q'])->toBe('hybrid query');
+});
+
+test('nearest neighbors returns the builder for chaining', function () {
+    $builder = $this->builder('*');
+
+    expect($builder->nearestNeighbors('embedding', [0.1], 3))->toBe($builder);
+});

@@ -1,26 +1,17 @@
 <?php
 
-namespace Siberfx\Typesense\Tests\Unit;
-
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
-use ReflectionMethod;
-use Siberfx\Typesense\Typesense;
-
 /**
  * Guards the public admin API surface (synonyms, overrides/curation, aliases,
  * analytics rules) on the Typesense wrapper. These are thin delegations to the
  * typesense-php client; live HTTP behaviour is exercised by the integration
  * suite / CI against a running Typesense server.
  */
-class AdminApiSurfaceTest extends TestCase
-{
-    /**
-     * @return array<string, array{0: string, 1: int}> method => required params
-     */
-    public static function adminMethods(): array
-    {
-        return [
+
+use Siberfx\Typesense\Typesense;
+
+// method => [method name, number of required parameters]
+dataset('admin methods', [
+
             // Synonyms
             'upsertSynonym' => ['upsertSynonym', 3],
             'retrieveSynonyms' => ['retrieveSynonyms', 1],
@@ -67,29 +58,14 @@ class AdminApiSurfaceTest extends TestCase
             'retrieveNLSearchModel' => ['retrieveNLSearchModel', 1],
             'updateNLSearchModel' => ['updateNLSearchModel', 2],
             'deleteNLSearchModel' => ['deleteNLSearchModel', 1],
-        ];
-    }
+]);
 
-    #[DataProvider('adminMethods')]
-    public function test_admin_method_exists_and_is_public_with_expected_arity(string $method, int $requiredParams): void
-    {
-        $this->assertTrue(
-            method_exists(Typesense::class, $method),
-            "Typesense::{$method}() should exist."
-        );
+test('admin method exists and is public with expected arity', function (string $method, int $requiredParams) {
+    expect(method_exists(Typesense::class, $method))->toBeTrue("Typesense::{$method}() should exist.");
 
-        $reflection = new ReflectionMethod(Typesense::class, $method);
+    $reflection = new ReflectionMethod(Typesense::class, $method);
 
-        $this->assertTrue($reflection->isPublic(), "Typesense::{$method}() should be public.");
-        $this->assertSame(
-            $requiredParams,
-            $reflection->getNumberOfRequiredParameters(),
-            "Typesense::{$method}() should require {$requiredParams} parameters."
-        );
-        $this->assertSame(
-            'array',
-            (string) $reflection->getReturnType(),
-            "Typesense::{$method}() should return array."
-        );
-    }
-}
+    expect($reflection->isPublic())->toBeTrue("Typesense::{$method}() should be public.");
+    expect($reflection->getNumberOfRequiredParameters())->toBe($requiredParams, "Typesense::{$method}() should require {$requiredParams} parameters.");
+    expect((string) $reflection->getReturnType())->toBe('array', "Typesense::{$method}() should return array.");
+})->with('admin methods');

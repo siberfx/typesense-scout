@@ -899,9 +899,9 @@ $c->analyticsV1()->rules()->retrieve();
 
 ```bash
 composer install
-composer test      # unit tests
+composer test      # unit tests (Pest)
 composer analyse   # PHPStan static analysis of src/
-vendor/bin/phpunit # everything, including integration tests when a server is reachable
+vendor/bin/pest    # everything, including integration tests when a server is reachable
 ```
 
 The suite has two groups:
@@ -916,7 +916,7 @@ The suite has two groups:
   ```bash
   TYPESENSE_HOST=localhost TYPESENSE_PORT=8108 \
   TYPESENSE_PROTOCOL=http TYPESENSE_API_KEY=xyz \
-  vendor/bin/phpunit --testsuite Integration
+  vendor/bin/pest --testsuite Integration
   ```
 
 ## Changelog

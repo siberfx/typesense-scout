@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.11] - 2026-11-10
+
+### Changed
+- The test suite is written in Pest. `composer test` and `composer test:integration` run it,
+  and CI runs `vendor/bin/pest`. Test behaviour and coverage are unchanged: 146 unit tests
+  and 19 integration tests (the integration tests skip when no server is reachable).
+- The integration tests share a connection trait (`IntegrationServer`) in place of the old
+  base class.
+- Pest 4.7 is a dev dependency (`pestphp/pest-plugin` is allowed in `config.allow-plugins`).
+
 ## [1.10.10] - 2026-11-10
 
 ### Changed

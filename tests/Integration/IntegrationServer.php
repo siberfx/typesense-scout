@@ -2,19 +2,20 @@
 
 namespace Siberfx\Typesense\Tests\Integration;
 
-use PHPUnit\Framework\TestCase;
 use Siberfx\Typesense\Typesense;
 use Typesense\Client;
 
 /**
- * Base case for integration tests that talk to a real Typesense server.
+ * Connects the integration tests to a real Typesense server.
  *
- * Connection details are read from TYPESENSE_* environment variables (falling
- * back to localhost:8108 / api key "xyz"). When no healthy server is reachable
- * every test is skipped, so the suite is safe to run anywhere — CI with a live
- * Typesense will execute them, local runs without one will skip cleanly.
+ * Connection details are read from TYPESENSE_* environment variables (falling back to
+ * localhost:8108 / api key "xyz"). When no healthy server is reachable every test is
+ * skipped, so the suite is safe to run anywhere. CI, with a live Typesense, runs them.
+ *
+ * Each integration test file uses this trait and calls connectToIntegrationServer() in
+ * its beforeEach(). That call skips the test when the server is not available.
  */
-abstract class IntegrationTestCase extends TestCase
+trait IntegrationServer
 {
     protected Client $client;
 
@@ -26,10 +27,8 @@ abstract class IntegrationTestCase extends TestCase
      */
     private static ?string $unavailableReason = null;
 
-    protected function setUp(): void
+    protected function connectToIntegrationServer(): void
     {
-        parent::setUp();
-
         if (self::$unavailableReason !== null) {
             $this->markTestSkipped(self::$unavailableReason);
         }

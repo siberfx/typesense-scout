@@ -3,7 +3,6 @@
 namespace Siberfx\Typesense\Tests\Unit;
 
 use Laravel\Scout\Builder;
-use PHPUnit\Framework\TestCase;
 use Siberfx\Typesense\Engines\TypesenseEngine;
 use Siberfx\Typesense\Typesense;
 use Typesense\Collection;
@@ -14,9 +13,10 @@ use Typesense\Exceptions\RequestMalformed;
  * Vector queries must travel in a POST body (multi-search), not in the GET
  * query string of a regular search, where long embeddings exceed the limit.
  */
-class VectorMultiSearchTest extends TestCase
+
+trait VectorMultiSearchTestHelpers
 {
-    private function builder(string $query): Builder
+    protected function builder(string $query): Builder
     {
         $model = new class {
             public function typesenseQueryBy(): array
@@ -33,7 +33,7 @@ class VectorMultiSearchTest extends TestCase
         return new Builder($model, $query);
     }
 
-    private function typesense(Documents $documents): Typesense
+    protected function typesense(Documents $documents): Typesense
     {
         $collection = $this->createStub(Collection::class);
         $collection->method('getDocuments')->willReturn($documents);
@@ -44,50 +44,51 @@ class VectorMultiSearchTest extends TestCase
 
         return $typesense;
     }
+}
 
-    public function test_plain_search_uses_documents_endpoint(): void
-    {
-        $documents = $this->createMock(Documents::class);
-        $documents->expects($this->once())->method('search')->willReturn(['found' => 0, 'hits' => []]);
+uses(VectorMultiSearchTestHelpers::class);
 
-        $typesense = $this->typesense($documents);
-        $typesense->expects($this->never())->method('multiSearch');
+test('plain search uses documents endpoint', function () {
+    $documents = $this->createMock(Documents::class);
+    $documents->expects($this->once())->method('search')->willReturn(['found' => 0, 'hits' => []]);
 
-        (new TypesenseEngine($typesense))->search($this->builder('shoes'));
-    }
+    $typesense = $this->typesense($documents);
+    $typesense->expects($this->never())->method('multiSearch');
 
-    public function test_vector_search_is_sent_through_multi_search(): void
-    {
-        $documents = $this->createMock(Documents::class);
-        $documents->expects($this->never())->method('search');
+    (new TypesenseEngine($typesense))->search($this->builder('shoes'));
+});
 
-        $typesense = $this->typesense($documents);
-        $typesense->expects($this->once())
-            ->method('multiSearch')
-            ->with(
-                $this->callback(function (array $body): bool {
-                    $search = $body['searches'][0];
+test('vector search is sent through multi search', function () {
+    $documents = $this->createMock(Documents::class);
+    $documents->expects($this->never())->method('search');
 
-                    return count($body['searches']) === 1
-                        && $search['collection'] === 'products'
-                        && $search['vector_query'] === 'embedding:([0.1, 0.2], k:10)'
-                        && $search['q'] === '*';
-                }),
-                []
-            )
-            ->willReturn(['results' => [['found' => 1, 'hits' => [['document' => ['id' => '7']]]]]]);
+    $typesense = $this->typesense($documents);
+    $typesense->expects($this->once())
+        ->method('multiSearch')
+        ->with(
+            $this->callback(function (array $body): bool {
+                $search = $body['searches'][0];
 
-        $engine = new TypesenseEngine($typesense);
-        $builder = $this->builder('*')->nearestNeighbors('embedding', [0.1, 0.2]);
+                return count($body['searches']) === 1
+                    && $search['collection'] === 'products'
+                    && $search['vector_query'] === 'embedding:([0.1, 0.2], k:10)'
+                    && $search['q'] === '*';
+            }),
+            []
+        )
+        ->willReturn(['results' => [['found' => 1, 'hits' => [['document' => ['id' => '7']]]]]]);
 
-        $result = $engine->search($builder);
+    $engine = new TypesenseEngine($typesense);
+    $builder = $this->builder('*')->nearestNeighbors('embedding', [0.1, 0.2]);
 
-        $this->assertSame(1, $result['found']);
-        $this->assertSame(['7'], $engine->mapIds($result)->all());
-    }
+    $result = $engine->search($builder);
 
-    public function test_multi_search_error_entry_is_thrown(): void
-    {
+    expect($result['found'])->toBe(1);
+    expect($engine->mapIds($result)->all())->toBe(['7']);
+});
+
+test('multi search error entry is thrown', function () {
+    expect(function () {
         $typesense = $this->typesense($this->createStub(Documents::class));
         $typesense->expects($this->once())->method('multiSearch')->willReturn([
             'results' => [['code' => 400, 'error' => 'Field `embedding` not found.']],
@@ -95,33 +96,30 @@ class VectorMultiSearchTest extends TestCase
 
         $builder = $this->builder('*')->vectorQuery('embedding:([0.1], k:3)');
 
-        $this->expectException(RequestMalformed::class);
-        $this->expectExceptionMessage('Field `embedding` not found.');
 
         (new TypesenseEngine($typesense))->search($builder);
-    }
+    })->toThrow(RequestMalformed::class, 'Field `embedding` not found.');
+});
 
-    public function test_common_vector_query_moves_into_each_multi_search_body(): void
-    {
-        $typesense = $this->typesense($this->createStub(Documents::class));
-        $typesense->expects($this->once())
-            ->method('multiSearch')
-            ->with(
-                $this->callback(fn (array $body): bool => $body['searches'] === [
-                    ['collection' => 'a', 'vector_query' => 'embedding:([0.1], k:3)'],
-                    ['collection' => 'b', 'vector_query' => 'own:([0.9], k:1)'],
-                ]),
-                $this->callback(fn (array $common): bool => !isset($common['vector_query']) && $common['q'] === '*')
-            )
-            ->willReturn(['results' => []]);
-
-        $builder = $this->builder('*')
-            ->vectorQuery('embedding:([0.1], k:3)')
-            ->searchMulti([
-                ['collection' => 'a'],
+test('common vector query moves into each multi search body', function () {
+    $typesense = $this->typesense($this->createStub(Documents::class));
+    $typesense->expects($this->once())
+        ->method('multiSearch')
+        ->with(
+            $this->callback(fn (array $body): bool => $body['searches'] === [
+                ['collection' => 'a', 'vector_query' => 'embedding:([0.1], k:3)'],
                 ['collection' => 'b', 'vector_query' => 'own:([0.9], k:1)'],
-            ]);
+            ]),
+            $this->callback(fn (array $common): bool => !isset($common['vector_query']) && $common['q'] === '*')
+        )
+        ->willReturn(['results' => []]);
 
-        (new TypesenseEngine($typesense))->search($builder);
-    }
-}
+    $builder = $this->builder('*')
+        ->vectorQuery('embedding:([0.1], k:3)')
+        ->searchMulti([
+            ['collection' => 'a'],
+            ['collection' => 'b', 'vector_query' => 'own:([0.9], k:1)'],
+        ]);
+
+    (new TypesenseEngine($typesense))->search($builder);
+});

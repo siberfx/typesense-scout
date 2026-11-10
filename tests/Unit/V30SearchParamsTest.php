@@ -3,7 +3,6 @@
 namespace Siberfx\Typesense\Tests\Unit;
 
 use Laravel\Scout\Builder;
-use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Siberfx\Typesense\Engines\TypesenseEngine;
 
@@ -11,15 +10,16 @@ use Siberfx\Typesense\Engines\TypesenseEngine;
  * Typesense server v30 search parameters: synonym sets, curation tags,
  * diversity (MMR), group_max_candidates and the Scout options() passthrough.
  */
-class V30SearchParamsTest extends TestCase
+
+trait V30SearchParamsTestHelpers
 {
-    private function engine(): TypesenseEngine
+    protected function engine(): TypesenseEngine
     {
         // Avoid the constructor so we don't need a live Typesense client.
         return (new ReflectionClass(TypesenseEngine::class))->newInstanceWithoutConstructor();
     }
 
-    private function builder(string $query = 'shoes'): Builder
+    protected function builder(string $query = 'shoes'): Builder
     {
         $model = new class {
             public function typesenseQueryBy(): array
@@ -31,77 +31,73 @@ class V30SearchParamsTest extends TestCase
         return new Builder($model, $query);
     }
 
-    private function invokePrivate(TypesenseEngine $engine, string $method, array $args = []): mixed
+    protected function invokePrivate(TypesenseEngine $engine, string $method, array $args = []): mixed
     {
         return (new ReflectionClass(TypesenseEngine::class))->getMethod($method)->invoke($engine, ...$args);
     }
 
-    private function params(TypesenseEngine $engine, ?Builder $builder = null): array
+    protected function params(TypesenseEngine $engine, ?Builder $builder = null): array
     {
         $params = $this->invokePrivate($engine, 'buildSearchParams', [$builder ?? $this->builder(), 1, 10]);
 
         return $this->invokePrivate($engine, 'filterSearchParams', [$params]);
     }
-
-    public function test_synonym_sets_and_curation_tags_are_sent_as_comma_lists(): void
-    {
-        $builder = $this->builder()->synonymSets(['clothing', 'tech'])->curationTags('summer');
-
-        $params = $this->params($this->engine(), $builder);
-
-        $this->assertSame('clothing,tech', $params['synonym_sets']);
-        $this->assertSame('summer', $params['curation_tags']);
-    }
-
-    public function test_diversity_lambda_and_group_max_candidates_are_sent(): void
-    {
-        $builder = $this->builder()->diversityLambda(0.75)->groupMaxCandidates(500);
-
-        $params = $this->params($this->engine(), $builder);
-
-        $this->assertSame(0.75, $params['diversity_lambda']);
-        $this->assertSame(500, $params['group_max_candidates']);
-    }
-
-    public function test_unset_v30_params_are_not_sent(): void
-    {
-        $params = $this->params($this->engine());
-
-        foreach (['synonym_sets', 'curation_tags', 'diversity_lambda', 'group_max_candidates'] as $key) {
-            $this->assertArrayNotHasKey($key, $params);
-        }
-    }
-
-    public function test_builder_options_are_passed_through_and_override_defaults(): void
-    {
-        $builder = $this->builder()->options([
-            'facet_sample_slope' => 0.5,
-            'facet_return_parent' => 'variants.color',
-            'prioritize_exact_match' => false,
-        ]);
-
-        $params = $this->params($this->engine(), $builder);
-
-        $this->assertSame(0.5, $params['facet_sample_slope']);
-        $this->assertSame('variants.color', $params['facet_return_parent']);
-        $this->assertFalse($params['prioritize_exact_match']);
-    }
-
-    public function test_scout_vector_option_is_not_sent_as_a_search_param(): void
-    {
-        $builder = $this->builder()->options(['vector' => [0.1, 0.2]]);
-
-        $this->assertArrayNotHasKey('vector', $this->params($this->engine(), $builder));
-    }
-
-    public function test_v30_params_do_not_leak_into_other_queries(): void
-    {
-        $this->params($this->engine(), $this->builder()->synonymSets('clothing')->curationTags('summer')
-            ->diversityLambda(0.3)->groupMaxCandidates(100));
-
-        $this->assertSame([], array_intersect_key(
-            $this->params($this->engine(), $this->builder()),
-            array_flip(['synonym_sets', 'curation_tags', 'diversity_lambda', 'group_max_candidates'])
-        ));
-    }
 }
+
+uses(V30SearchParamsTestHelpers::class);
+
+test('synonym sets and curation tags are sent as comma lists', function () {
+    $builder = $this->builder()->synonymSets(['clothing', 'tech'])->curationTags('summer');
+
+    $params = $this->params($this->engine(), $builder);
+
+    expect($params['synonym_sets'])->toBe('clothing,tech');
+    expect($params['curation_tags'])->toBe('summer');
+});
+
+test('diversity lambda and group max candidates are sent', function () {
+    $builder = $this->builder()->diversityLambda(0.75)->groupMaxCandidates(500);
+
+    $params = $this->params($this->engine(), $builder);
+
+    expect($params['diversity_lambda'])->toBe(0.75);
+    expect($params['group_max_candidates'])->toBe(500);
+});
+
+test('unset v30 params are not sent', function () {
+    $params = $this->params($this->engine());
+
+    foreach (['synonym_sets', 'curation_tags', 'diversity_lambda', 'group_max_candidates'] as $key) {
+        expect($params)->not->toHaveKey($key);
+    }
+});
+
+test('builder options are passed through and override defaults', function () {
+    $builder = $this->builder()->options([
+        'facet_sample_slope' => 0.5,
+        'facet_return_parent' => 'variants.color',
+        'prioritize_exact_match' => false,
+    ]);
+
+    $params = $this->params($this->engine(), $builder);
+
+    expect($params['facet_sample_slope'])->toBe(0.5);
+    expect($params['facet_return_parent'])->toBe('variants.color');
+    expect($params['prioritize_exact_match'])->toBeFalse();
+});
+
+test('scout vector option is not sent as a search param', function () {
+    $builder = $this->builder()->options(['vector' => [0.1, 0.2]]);
+
+    expect($this->params($this->engine(), $builder))->not->toHaveKey('vector');
+});
+
+test('v30 params do not leak into other queries', function () {
+    $this->params($this->engine(), $this->builder()->synonymSets('clothing')->curationTags('summer')
+        ->diversityLambda(0.3)->groupMaxCandidates(100));
+
+    expect(array_intersect_key(
+        $this->params($this->engine(), $this->builder()),
+        array_flip(['synonym_sets', 'curation_tags', 'diversity_lambda', 'group_max_candidates'])
+    ))->toBe([]);
+});
