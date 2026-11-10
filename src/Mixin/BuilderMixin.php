@@ -3,20 +3,16 @@
 namespace Siberfx\Typesense\Mixin;
 
 use Closure;
+use Siberfx\Typesense\Engines\SearchOptions;
 
 /**
- * Class BuilderMixin.
- *
- * @mixin \Laravel\Scout\Builder
- *
- * @date 09/10/2021
- *
- * @author Selim Görmüş <info@siberfx.com>
+ * Typesense-specific methods added to Scout's Builder. Each one stores its option on
+ * the builder itself (see SearchOptions), so it applies to this query only.
  */
 class BuilderMixin
 {
     /**
-     * @return \Closure
+     * Total number of matches for the query.
      */
     public function count(): Closure
     {
@@ -27,467 +23,280 @@ class BuilderMixin
         };
     }
 
-    /**
-     * @param string $column
-     * @param float  $lat
-     * @param float  $lng
-     * @param string $direction
-     *
-     * @return \Closure
-     */
     public function orderByLocation(): Closure
     {
         return function (string $column, float $lat, float $lng, string $direction = 'asc') {
-            $this->engine()
-                 ->orderByLocation($column, $lat, $lng, $direction);
+            SearchOptions::for($this)->orderByLocation($column, $lat, $lng, $direction);
 
             return $this;
         };
     }
 
-    /**
-     * @param array|string $groupBy
-     *
-     * @return \Closure
-     */
     public function groupBy(): Closure
     {
         return function (array|string $groupBy) {
-            $groupBy = is_array($groupBy) ? $groupBy : func_get_args();
-            $this->engine()
-                 ->groupBy($groupBy);
+            SearchOptions::for($this)->groupBy = is_array($groupBy) ? $groupBy : func_get_args();
 
             return $this;
         };
     }
 
-    /**
-     * @param int $groupByLimit
-     *
-     * @return \Closure
-     */
     public function groupByLimit(): Closure
     {
         return function (int $groupByLimit) {
-            $this->engine()
-                 ->groupByLimit($groupByLimit);
+            SearchOptions::for($this)->groupByLimit = $groupByLimit;
 
             return $this;
         };
     }
 
-    /**
-     * @param string $startTag
-     *
-     * @return \Closure
-     */
     public function setHighlightStartTag(): Closure
     {
         return function (string $startTag) {
-            $this->engine()
-                 ->setHighlightStartTag($startTag);
+            SearchOptions::for($this)->startTag = $startTag;
 
             return $this;
         };
     }
 
-    /**
-     * @param string $endTag
-     *
-     * @return \Closure
-     */
     public function setHighlightEndTag(): Closure
     {
         return function (string $endTag) {
-            $this->engine()
-                 ->setHighlightEndTag($endTag);
+            SearchOptions::for($this)->endTag = $endTag;
 
             return $this;
         };
     }
 
-    /**
-     * @param int $limitHits
-     *
-     * @return \Closure
-     */
     public function limitHits(): Closure
     {
         return function (int $limitHits) {
-            $this->engine()
-                 ->limitHits($limitHits);
+            SearchOptions::for($this)->limitHits = $limitHits;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $facetBy
-     *
-     * @return \Closure
-     */
     public function facetBy(): Closure
     {
         return function (array $facetBy) {
-            $this->engine()
-                ->facetBy($facetBy);
+            SearchOptions::for($this)->facetBy = $facetBy;
 
             return $this;
         };
     }
 
-    /**
-     * @param int $maxFacetValues
-     *
-     * @return \Closure
-     */
     public function setMaxFacetValues(): Closure
     {
         return function (int $maxFacetValues) {
-            $this->engine()
-                ->setMaxFacetValues($maxFacetValues);
+            SearchOptions::for($this)->maxFacetValues = $maxFacetValues;
 
             return $this;
         };
     }
 
-    /**
-     * @param string $facetQuery
-     *
-     * @return \Closure
-     */
     public function facetQuery(): Closure
     {
         return function (string $facetQuery) {
-            $this->engine()
-                ->facetQuery($facetQuery);
+            SearchOptions::for($this)->facetQuery = $facetQuery;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $includeFields
-     *
-     * @return \Closure
-     */
     public function setIncludeFields(): Closure
     {
         return function (array $includeFields) {
-            $this->engine()
-                ->setIncludeFields($includeFields);
+            SearchOptions::for($this)->includeFields = $includeFields;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $excludeFields
-     *
-     * @return \Closure
-     */
     public function setExcludeFields(): Closure
     {
         return function (array $excludeFields) {
-            $this->engine()
-                ->setExcludeFields($excludeFields);
+            SearchOptions::for($this)->excludeFields = $excludeFields;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $highlightFields
-     *
-     * @return \Closure
-     */
     public function setHighlightFields(): Closure
     {
         return function (array $highlightFields) {
-            $this->engine()
-                ->setHighlightFields($highlightFields);
+            SearchOptions::for($this)->highlightFields = $highlightFields;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $pinnedHits
-     *
-     * @return \Closure
-     */
     public function setPinnedHits(): Closure
     {
         return function (array $pinnedHits) {
-            $this->engine()
-                ->setPinnedHits($pinnedHits);
+            SearchOptions::for($this)->pinnedHits = $pinnedHits;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $hiddenHits
-     *
-     * @return \Closure
-     */
     public function setHiddenHits(): Closure
     {
         return function (array $hiddenHits) {
-            $this->engine()
-                ->setHiddenHits($hiddenHits);
+            SearchOptions::for($this)->hiddenHits = $hiddenHits;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $highlightFullFields
-     *
-     * @return \Closure
-     */
     public function setHighlightFullFields(): Closure
     {
         return function (array $highlightFullFields) {
-            $this->engine()
-                ->setHighlightFullFields($highlightFullFields);
+            SearchOptions::for($this)->highlightFullFields = $highlightFullFields;
 
             return $this;
         };
     }
 
-    /**
-     * @param int $highlightAffixNumTokens
-     *
-     * @return \Closure
-     */
     public function setHighlightAffixNumTokens(): Closure
     {
         return function (int $highlightAffixNumTokens) {
-            $this->engine()
-                ->setHighlightAffixNumTokens($highlightAffixNumTokens);
+            SearchOptions::for($this)->highlightAffixNumTokens = $highlightAffixNumTokens;
 
             return $this;
         };
     }
 
-    /**
-     * @param string $infix
-     *
-     * @return \Closure
-     */
     public function setInfix(): Closure
     {
         return function (string $infix) {
-            $this->engine()
-                ->setInfix($infix);
+            SearchOptions::for($this)->infix = $infix;
 
             return $this;
         };
     }
 
-    /**
-     * @param int $snippetThreshold
-     *
-     * @return \Closure
-     */
     public function setSnippetThreshold(): Closure
     {
         return function (int $snippetThreshold) {
-            $this->engine()
-                ->setSnippetThreshold($snippetThreshold);
+            SearchOptions::for($this)->snippetThreshold = $snippetThreshold;
 
             return $this;
         };
     }
 
-    /**
-     * @param bool $exhaustiveSearch
-     *
-     * @return \Closure
-     */
     public function exhaustiveSearch(): Closure
     {
         return function (bool $exhaustiveSearch) {
-            $this->engine()
-                ->exhaustiveSearch($exhaustiveSearch);
+            SearchOptions::for($this)->exhaustiveSearch = $exhaustiveSearch;
 
             return $this;
         };
     }
 
-    /**
-     * @param bool $useCache
-     *
-     * @return \Closure
-     */
     public function setUseCache(): Closure
     {
         return function (bool $useCache) {
-            $this->engine()
-                ->setUseCache($useCache);
+            SearchOptions::for($this)->useCache = $useCache;
 
             return $this;
         };
     }
 
-    /**
-     * @param int $cacheTtl
-     *
-     * @return \Closure
-     */
     public function setCacheTtl(): Closure
     {
         return function (int $cacheTtl) {
-            $this->engine()
-                ->setCacheTtl($cacheTtl);
+            SearchOptions::for($this)->cacheTtl = $cacheTtl;
 
             return $this;
         };
     }
 
-    /**
-     * @param bool $prioritizeExactMatch
-     *
-     * @return \Closure
-     */
     public function setPrioritizeExactMatch(): Closure
     {
         return function (bool $prioritizeExactMatch) {
-            $this->engine()
-                ->setPrioritizeExactMatch($prioritizeExactMatch);
+            SearchOptions::for($this)->prioritizeExactMatch = $prioritizeExactMatch;
 
             return $this;
         };
     }
 
-    /**
-     * @param string $prefix
-     *
-     * @return \Closure
-     */
     public function setPrefix(): Closure
     {
         return function (string $prefix) {
-            $this->engine()
-                ->setPrefix($prefix);
+            SearchOptions::for($this)->prefix = $prefix;
 
             return $this;
         };
     }
 
-    /**
-     * @param bool $enableOverrides
-     *
-     * @return \Closure
-     */
     public function enableOverrides(): Closure
     {
         return function (bool $enableOverrides) {
-            $this->engine()
-                ->enableOverrides($enableOverrides);
+            SearchOptions::for($this)->enableOverrides = $enableOverrides;
 
             return $this;
         };
     }
 
-    /**
-     * @param array $searchRequests
-     *
-     * @return \Closure
-     */
     public function searchMulti(): Closure
     {
         return function (array $searchRequests) {
-            $this->engine()->searchMulti($searchRequests);
+            SearchOptions::for($this)->optionsMulti = $searchRequests;
 
             return $this;
         };
     }
 
-    /**
-     * @param string $vectorQuery
-     *
-     * @return \Closure
-     */
     public function vectorQuery(): Closure
     {
         return function (string $vectorQuery) {
-            $this->engine()->vectorQuery($vectorQuery);
+            SearchOptions::for($this)->vectorQuery = $vectorQuery;
 
             return $this;
         };
     }
 
-    /**
-     * @param string     $field
-     * @param array      $vector
-     * @param int        $k
-     * @param float|null $distanceThreshold
-     * @param float|null $alpha
-     *
-     * @return \Closure
-     */
     public function nearestNeighbors(): Closure
     {
         return function (string $field, array $vector, int $k = 10, ?float $distanceThreshold = null, ?float $alpha = null) {
-            $this->engine()->nearestNeighbors($field, $vector, $k, $distanceThreshold, $alpha);
+            SearchOptions::for($this)->nearestNeighbors($field, $vector, $k, $distanceThreshold, $alpha);
 
             return $this;
         };
     }
 
-    /**
-     * @param array|string $synonymSets
-     *
-     * @return \Closure
-     */
     public function synonymSets(): Closure
     {
         return function (array|string $synonymSets) {
-            $this->engine()->synonymSets($synonymSets);
+            SearchOptions::for($this)->synonymSets = (array) $synonymSets;
 
             return $this;
         };
     }
 
-    /**
-     * @param array|string $curationTags
-     *
-     * @return \Closure
-     */
     public function curationTags(): Closure
     {
         return function (array|string $curationTags) {
-            $this->engine()->curationTags($curationTags);
+            SearchOptions::for($this)->curationTags = (array) $curationTags;
 
             return $this;
         };
     }
 
-    /**
-     * @param float $lambda
-     *
-     * @return \Closure
-     */
     public function diversityLambda(): Closure
     {
         return function (float $lambda) {
-            $this->engine()->diversityLambda($lambda);
+            SearchOptions::for($this)->diversityLambda = $lambda;
 
             return $this;
         };
     }
 
-    /**
-     * @param int $groupMaxCandidates
-     *
-     * @return \Closure
-     */
     public function groupMaxCandidates(): Closure
     {
         return function (int $groupMaxCandidates) {
-            $this->engine()->groupMaxCandidates($groupMaxCandidates);
+            SearchOptions::for($this)->groupMaxCandidates = $groupMaxCandidates;
 
             return $this;
         };

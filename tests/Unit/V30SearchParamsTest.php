@@ -45,11 +45,9 @@ class V30SearchParamsTest extends TestCase
 
     public function test_synonym_sets_and_curation_tags_are_sent_as_comma_lists(): void
     {
-        $engine = $this->engine();
-        $engine->synonymSets(['clothing', 'tech']);
-        $engine->curationTags('summer');
+        $builder = $this->builder()->synonymSets(['clothing', 'tech'])->curationTags('summer');
 
-        $params = $this->params($engine);
+        $params = $this->params($this->engine(), $builder);
 
         $this->assertSame('clothing,tech', $params['synonym_sets']);
         $this->assertSame('summer', $params['curation_tags']);
@@ -57,11 +55,9 @@ class V30SearchParamsTest extends TestCase
 
     public function test_diversity_lambda_and_group_max_candidates_are_sent(): void
     {
-        $engine = $this->engine();
-        $engine->diversityLambda(0.75);
-        $engine->groupMaxCandidates(500);
+        $builder = $this->builder()->diversityLambda(0.75)->groupMaxCandidates(500);
 
-        $params = $this->params($engine);
+        $params = $this->params($this->engine(), $builder);
 
         $this->assertSame(0.75, $params['diversity_lambda']);
         $this->assertSame(500, $params['group_max_candidates']);
@@ -98,18 +94,13 @@ class V30SearchParamsTest extends TestCase
         $this->assertArrayNotHasKey('vector', $this->params($this->engine(), $builder));
     }
 
-    public function test_v30_params_are_reset_after_a_search(): void
+    public function test_v30_params_do_not_leak_into_other_queries(): void
     {
-        $engine = $this->engine();
-        $engine->synonymSets('clothing');
-        $engine->curationTags('summer');
-        $engine->diversityLambda(0.3);
-        $engine->groupMaxCandidates(100);
-
-        $this->invokePrivate($engine, 'resetSearchParameters');
+        $this->params($this->engine(), $this->builder()->synonymSets('clothing')->curationTags('summer')
+            ->diversityLambda(0.3)->groupMaxCandidates(100));
 
         $this->assertSame([], array_intersect_key(
-            $this->params($engine),
+            $this->params($this->engine(), $this->builder()),
             array_flip(['synonym_sets', 'curation_tags', 'diversity_lambda', 'group_max_candidates'])
         ));
     }

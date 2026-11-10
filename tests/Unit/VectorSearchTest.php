@@ -46,30 +46,27 @@ class VectorSearchTest extends TestCase
 
     public function test_raw_vector_query_is_passed_through(): void
     {
-        $engine = $this->engine();
-        $engine->vectorQuery('embedding:([0.1, 0.2], k:5)');
+        $builder = $this->builder('*')->vectorQuery('embedding:([0.1, 0.2], k:5)');
 
-        $params = $this->buildParams($engine, $this->builder('*'));
+        $params = $this->buildParams($this->engine(), $builder);
 
         $this->assertSame('embedding:([0.1, 0.2], k:5)', $params['vector_query']);
     }
 
     public function test_nearest_neighbors_builds_basic_query(): void
     {
-        $engine = $this->engine();
-        $engine->nearestNeighbors('embedding', [0.1, 0.2, 0.3], 10);
+        $builder = $this->builder('*')->nearestNeighbors('embedding', [0.1, 0.2, 0.3], 10);
 
-        $params = $this->buildParams($engine, $this->builder('*'));
+        $params = $this->buildParams($this->engine(), $builder);
 
         $this->assertSame('embedding:([0.1, 0.2, 0.3], k:10)', $params['vector_query']);
     }
 
     public function test_nearest_neighbors_includes_distance_threshold_and_alpha(): void
     {
-        $engine = $this->engine();
-        $engine->nearestNeighbors('embedding', [0.5, 0.6], 8, 0.3, 0.4);
+        $builder = $this->builder('hybrid query')->nearestNeighbors('embedding', [0.5, 0.6], 8, 0.3, 0.4);
 
-        $params = $this->buildParams($engine, $this->builder('hybrid query'));
+        $params = $this->buildParams($this->engine(), $builder);
 
         $this->assertSame(
             'embedding:([0.5, 0.6], k:8, distance_threshold:0.3, alpha:0.4)',
@@ -79,10 +76,10 @@ class VectorSearchTest extends TestCase
         $this->assertSame('hybrid query', $params['q']);
     }
 
-    public function test_nearest_neighbors_returns_engine_for_chaining(): void
+    public function test_nearest_neighbors_returns_the_builder_for_chaining(): void
     {
-        $engine = $this->engine();
+        $builder = $this->builder('*');
 
-        $this->assertSame($engine, $engine->nearestNeighbors('embedding', [0.1], 3));
+        $this->assertSame($builder, $builder->nearestNeighbors('embedding', [0.1], 3));
     }
 }

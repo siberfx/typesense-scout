@@ -37,156 +37,6 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     private Typesense $typesense;
 
     /**
-     * @var array
-     */
-    private array $groupBy = [];
-
-    /**
-     * @var int
-     */
-    private int $groupByLimit = 3;
-
-    /**
-     * @var string
-     */
-    private string $startTag = '<mark>';
-
-    /**
-     * @var string
-     */
-    private string $endTag = '</mark>';
-
-    /**
-     * @var int
-     */
-    private int $limitHits = -1;
-
-    /**
-     * @var array
-     */
-    private array $locationOrderBy = [];
-
-    /**
-     * @var array
-     */
-    private array $facetBy = [];
-
-    /**
-     * @var int
-     */
-    private int $maxFacetValues = 10;
-
-    /**
-     * @var bool
-     */
-    private bool $useCache = false;
-
-    /**
-     * @var int
-     */
-    private int $cacheTtl = 60;
-
-    /**
-     * @var int
-     */
-    private int $snippetThreshold = 30;
-
-    /**
-     * @var bool
-     */
-    private bool $exhaustiveSearch = false;
-
-    /**
-     * @var bool
-     */
-    private bool $prioritizeExactMatch = true;
-
-    /**
-     * @var bool
-     */
-    private bool $enableOverrides = true;
-
-    /**
-     * @var int
-     */
-    private int $highlightAffixNumTokens = 4;
-
-    /**
-     * @var string
-     */
-    private string $facetQuery = '';
-
-    /**
-     * @var string
-     */
-    private string $infix = 'off';
-
-    /**
-     * @var array
-     */
-    private array $includeFields = [];
-
-    /**
-     * @var array
-     */
-    private array $excludeFields = [];
-
-    /**
-     * @var array
-     */
-    private array $highlightFields = [];
-
-    /**
-     * @var array
-     */
-    private array $highlightFullFields = [];
-
-    /**
-     * @var array
-     */
-    private array $pinnedHits = [];
-
-    /**
-     * @var array
-     */
-    private array $hiddenHits = [];
-
-    /**
-     * @var array
-     */
-    private array $optionsMulti = [];
-
-    /**
-     * @var string|null
-     */
-    private ?string $prefix = null;
-
-    /**
-     * @var string
-     */
-    private string $vectorQuery = '';
-
-    /**
-     * @var array
-     */
-    private array $synonymSets = [];
-
-    /**
-     * @var array
-     */
-    private array $curationTags = [];
-
-    /**
-     * @var float|null
-     */
-    private ?float $diversityLambda = null;
-
-    /**
-     * @var int|null
-     */
-    private ?int $groupMaxCandidates = null;
-
-    /**
      * The `scout.typesense` configuration (used for `model-settings`).
      *
      * @var array
@@ -336,11 +186,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     public function search(Builder $builder): mixed
     {
-        try {
-            return $this->performSearch($builder, $this->filterSearchParams($this->buildSearchParams($builder, 1, $builder->limit)));
-        } finally {
-            $this->resetSearchParameters();
-        }
+        return $this->performSearch($builder, $this->filterSearchParams($this->buildSearchParams($builder, 1, $builder->limit)));
     }
 
     /**
@@ -355,11 +201,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     public function paginate(Builder $builder, $perPage, $page): mixed
     {
-        try {
-            return $this->performSearch($builder, $this->filterSearchParams($this->buildSearchParams($builder, $page, $perPage)));
-        } finally {
-            $this->resetSearchParameters();
-        }
+        return $this->performSearch($builder, $this->filterSearchParams($this->buildSearchParams($builder, $page, $perPage)));
     }
 
     /**
@@ -385,48 +227,6 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     }
 
     /**
-     * Restore the per-query fluent options to their defaults.
-     *
-     * The engine is resolved once per container, so options set through the
-     * Builder mixin (groupBy, facetBy, vector queries, multi-search, ...)
-     * would otherwise leak into every subsequent search — including searches
-     * from other requests in long-lived workers (queues, Octane).
-     */
-    private function resetSearchParameters(): void
-    {
-        $this->groupBy = [];
-        $this->groupByLimit = 3;
-        $this->startTag = '<mark>';
-        $this->endTag = '</mark>';
-        $this->limitHits = -1;
-        $this->locationOrderBy = [];
-        $this->facetBy = [];
-        $this->maxFacetValues = 10;
-        $this->useCache = false;
-        $this->cacheTtl = 60;
-        $this->snippetThreshold = 30;
-        $this->exhaustiveSearch = false;
-        $this->prioritizeExactMatch = true;
-        $this->enableOverrides = true;
-        $this->highlightAffixNumTokens = 4;
-        $this->facetQuery = '';
-        $this->infix = 'off';
-        $this->includeFields = [];
-        $this->excludeFields = [];
-        $this->highlightFields = [];
-        $this->highlightFullFields = [];
-        $this->pinnedHits = [];
-        $this->hiddenHits = [];
-        $this->optionsMulti = [];
-        $this->prefix = null;
-        $this->vectorQuery = '';
-        $this->synonymSets = [];
-        $this->curationTags = [];
-        $this->diversityLambda = null;
-        $this->groupMaxCandidates = null;
-    }
-
-    /**
      * @param \Laravel\Scout\Builder $builder
      * @param int $page
      * @param int|null $perPage
@@ -435,68 +235,70 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     private function buildSearchParams(Builder $builder, int $page, int|null $perPage): array
     {
+        $searchOptions = SearchOptions::for($builder);
+
         $params = [
             'q'                          => $builder->query,
             'query_by'                   => implode(',', $builder->model->typesenseQueryBy()),
             'filter_by'                  => $this->filters($builder),
             'per_page'                   => $perPage,
             'page'                       => $page,
-            'highlight_start_tag'        => $this->startTag,
-            'highlight_end_tag'          => $this->endTag,
-            'snippet_threshold'          => $this->snippetThreshold,
-            'exhaustive_search'          => $this->exhaustiveSearch,
-            'use_cache'                  => $this->useCache,
-            'cache_ttl'                  => $this->cacheTtl,
-            'prioritize_exact_match'     => $this->prioritizeExactMatch,
-            'enable_overrides'           => $this->enableOverrides,
-            'highlight_affix_num_tokens' => $this->highlightAffixNumTokens,
-            'infix'                      => $this->infix,
+            'highlight_start_tag'        => $searchOptions->startTag,
+            'highlight_end_tag'          => $searchOptions->endTag,
+            'snippet_threshold'          => $searchOptions->snippetThreshold,
+            'exhaustive_search'          => $searchOptions->exhaustiveSearch,
+            'use_cache'                  => $searchOptions->useCache,
+            'cache_ttl'                  => $searchOptions->cacheTtl,
+            'prioritize_exact_match'     => $searchOptions->prioritizeExactMatch,
+            'enable_overrides'           => $searchOptions->enableOverrides,
+            'highlight_affix_num_tokens' => $searchOptions->highlightAffixNumTokens,
+            'infix'                      => $searchOptions->infix,
         ];
 
-        if ($this->limitHits > 0) {
-            $params['limit_hits'] = $this->limitHits;
+        if ($searchOptions->limitHits > 0) {
+            $params['limit_hits'] = $searchOptions->limitHits;
         }
 
-        if (!empty($this->groupBy)) {
-            $params['group_by'] = implode(',', $this->groupBy);
-            $params['group_limit'] = $this->groupByLimit;
+        if (!empty($searchOptions->groupBy)) {
+            $params['group_by'] = implode(',', $searchOptions->groupBy);
+            $params['group_limit'] = $searchOptions->groupByLimit;
         }
 
-        if (!empty($this->facetBy)) {
-            $params['facet_by'] = implode(',', $this->facetBy);
-            $params['max_facet_values'] = $this->maxFacetValues;
+        if (!empty($searchOptions->facetBy)) {
+            $params['facet_by'] = implode(',', $searchOptions->facetBy);
+            $params['max_facet_values'] = $searchOptions->maxFacetValues;
         }
 
-        if (!empty($this->facetQuery)) {
-            $params['facet_query'] = $this->facetQuery;
+        if (!empty($searchOptions->facetQuery)) {
+            $params['facet_query'] = $searchOptions->facetQuery;
         }
 
-        if (!empty($this->includeFields)) {
-            $params['include_fields'] = implode(',', $this->includeFields);
+        if (!empty($searchOptions->includeFields)) {
+            $params['include_fields'] = implode(',', $searchOptions->includeFields);
         }
 
-        if (!empty($this->excludeFields)) {
-            $params['exclude_fields'] = implode(',', $this->excludeFields);
+        if (!empty($searchOptions->excludeFields)) {
+            $params['exclude_fields'] = implode(',', $searchOptions->excludeFields);
         }
 
-        if (!empty($this->highlightFields)) {
-            $params['highlight_fields'] = implode(',', $this->highlightFields);
+        if (!empty($searchOptions->highlightFields)) {
+            $params['highlight_fields'] = implode(',', $searchOptions->highlightFields);
         }
 
-        if (!empty($this->highlightFullFields)) {
-            $params['highlight_full_fields'] = implode(',', $this->highlightFullFields);
+        if (!empty($searchOptions->highlightFullFields)) {
+            $params['highlight_full_fields'] = implode(',', $searchOptions->highlightFullFields);
         }
 
-        if (!empty($this->pinnedHits)) {
-            $params['pinned_hits'] = implode(',', $this->pinnedHits);
+        if (!empty($searchOptions->pinnedHits)) {
+            $params['pinned_hits'] = implode(',', $searchOptions->pinnedHits);
         }
 
-        if (!empty($this->hiddenHits)) {
-            $params['hidden_hits'] = implode(',', $this->hiddenHits);
+        if (!empty($searchOptions->hiddenHits)) {
+            $params['hidden_hits'] = implode(',', $searchOptions->hiddenHits);
         }
 
-        if (!empty($this->locationOrderBy)) {
-            $params['sort_by'] = $this->parseOrderByLocation(...$this->locationOrderBy);
+        if (!empty($searchOptions->locationOrderBy)) {
+            $params['sort_by'] = $this->parseOrderByLocation(...$searchOptions->locationOrderBy);
         }
 
         if (!empty($builder->orders)) {
@@ -508,28 +310,28 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             $params['sort_by'] .= $this->parseOrderBy($builder->orders);
         }
         
-        if (!empty($this->prefix)) {
-            $params['prefix'] = $this->prefix;
+        if (!empty($searchOptions->prefix)) {
+            $params['prefix'] = $searchOptions->prefix;
         }
 
-        if (!empty($this->vectorQuery)) {
-            $params['vector_query'] = $this->vectorQuery;
+        if (!empty($searchOptions->vectorQuery)) {
+            $params['vector_query'] = $searchOptions->vectorQuery;
         }
 
-        if (!empty($this->synonymSets)) {
-            $params['synonym_sets'] = implode(',', $this->synonymSets);
+        if (!empty($searchOptions->synonymSets)) {
+            $params['synonym_sets'] = implode(',', $searchOptions->synonymSets);
         }
 
-        if (!empty($this->curationTags)) {
-            $params['curation_tags'] = implode(',', $this->curationTags);
+        if (!empty($searchOptions->curationTags)) {
+            $params['curation_tags'] = implode(',', $searchOptions->curationTags);
         }
 
-        if ($this->diversityLambda !== null) {
-            $params['diversity_lambda'] = $this->diversityLambda;
+        if ($searchOptions->diversityLambda !== null) {
+            $params['diversity_lambda'] = $searchOptions->diversityLambda;
         }
 
-        if ($this->groupMaxCandidates !== null) {
-            $params['group_max_candidates'] = $this->groupMaxCandidates;
+        if ($searchOptions->groupMaxCandidates !== null) {
+            $params['group_max_candidates'] = $searchOptions->groupMaxCandidates;
         }
 
         // Scout's options() passes any other Typesense search parameter
@@ -549,11 +351,13 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     private function applySemanticSearchParams(Builder $builder, array $params): array
     {
+        $searchOptions = SearchOptions::for($builder);
+
         if (!$builder->semanticSearch && $builder->hybridSearch === null) {
             return $params;
         }
 
-        if ($this->vectorQuery !== '') {
+        if ($searchOptions->vectorQuery !== '') {
             throw new ScoutException('Typesense semantic and hybrid searches cannot be combined with vectorQuery() or nearestNeighbors().');
         }
 
@@ -877,6 +681,8 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     protected function performSearch(Builder $builder, array $options = []): mixed
     {
+        $searchOptions = SearchOptions::for($builder);
+
         if ($builder->callback) {
             $documents = $this->typesense->withCollection(
                 $builder->model,
@@ -886,8 +692,8 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
             return call_user_func($builder->callback, $documents, $builder->query, $options);
         }
 
-        if ($this->optionsMulti) {
-            return $this->typesense->multiSearch(...$this->moveVectorQueryIntoSearches($this->optionsMulti, $options));
+        if ($searchOptions->optionsMulti) {
+            return $this->typesense->multiSearch(...$this->moveVectorQueryIntoSearches($searchOptions->optionsMulti, $options));
         }
 
         if (!isset($options['vector_query'])) {
@@ -1271,491 +1077,6 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     public function createIndex($name, array $options = []): void
     {
         throw new Exception('Typesense indexes are created automatically upon adding objects.');
-    }
-
-    /**
-     * You can aggregate search results into groups or buckets by specify one or more group_by fields. Separate multiple fields with a comma.
-     *
-     * @param array $groupBy
-     *
-     * @return $this
-     */
-    public function groupBy(array $groupBy): static
-    {
-        $this->groupBy = $groupBy;
-
-        return $this;
-    }
-
-    /**
-     * Maximum number of hits to be returned for every group. (default: 3).
-     *
-     * @param int $groupByLimit
-     *
-     * @return $this
-     */
-    public function groupByLimit(int $groupByLimit): static
-    {
-        $this->groupByLimit = $groupByLimit;
-
-        return $this;
-    }
-
-    /**
-     * The start tag used for the highlighted snippets. (default: <mark>).
-     *
-     * @param string $startTag
-     *
-     * @return $this
-     */
-    public function setHighlightStartTag(string $startTag): static
-    {
-        $this->startTag = $startTag;
-
-        return $this;
-    }
-
-    /**
-     * The end tag used for the highlighted snippets. (default: </mark>).
-     *
-     * @param string $endTag
-     *
-     * @return $this
-     */
-    public function setHighlightEndTag(string $endTag): static
-    {
-        $this->endTag = $endTag;
-
-        return $this;
-    }
-
-    /**
-     * Maximum number of hits that can be fetched from the collection (default: no limit).
-     *
-     * (page * per_page) should be less than this number for the search request to return results.
-     *
-     * @param int $limitHits
-     *
-     * @return $this
-     */
-    public function limitHits(int $limitHits): static
-    {
-        $this->limitHits = $limitHits;
-
-        return $this;
-    }
-
-    /**
-     * A list of fields that will be used for faceting your results on. Separate multiple fields with a comma.
-     *
-     * @param array $facetBy
-     *
-     * @return $this
-     */
-    public function facetBy(array $facetBy): static
-    {
-        $this->facetBy = $facetBy;
-
-        return $this;
-    }
-
-    /**
-     * Maximum number of facet values to be returned.
-     *
-     * @param int $maxFacetValues
-     *
-     * @return $this
-     */
-    public function setMaxFacetValues(int $maxFacetValues): static
-    {
-        $this->maxFacetValues = $maxFacetValues;
-
-        return $this;
-    }
-
-    /**
-     * Facet values that are returned can now be filtered via this parameter.
-     *
-     * The matching facet text is also highlighted. For example, when faceting by category,
-     * you can set facet_query=category:shoe to return only facet values that contain the prefix "shoe".
-     *
-     * @param string $facetQuery
-     *
-     * @return $this
-     */
-    public function facetQuery(string $facetQuery): static
-    {
-        $this->facetQuery = $facetQuery;
-
-        return $this;
-    }
-
-    /**
-     * Comma-separated list of fields from the document to include in the search result.
-     *
-     * @param array $includeFields
-     *
-     * @return $this
-     */
-    public function setIncludeFields(array $includeFields): static
-    {
-        $this->includeFields = $includeFields;
-
-        return $this;
-    }
-
-    /**
-     * Comma-separated list of fields from the document to exclude in the search result.
-     *
-     * @param array $excludeFields
-     *
-     * @return $this
-     */
-    public function setExcludeFields(array $excludeFields): static
-    {
-        $this->excludeFields = $excludeFields;
-
-        return $this;
-    }
-
-    /**
-     * Comma separated list of fields that should be highlighted with snippetting.
-     *
-     * You can use this parameter to highlight fields that you don't query for, as well.
-     *
-     * @param array $highlightFields
-     *
-     * @return $this
-     */
-    public function setHighlightFields(array $highlightFields): static
-    {
-        $this->highlightFields = $highlightFields;
-
-        return $this;
-    }
-
-    /**
-     * A list of records to unconditionally include in the search results at specific positions.
-     *
-     * @param array $pinnedHits
-     *
-     * @return $this
-     */
-    public function setPinnedHits(array $pinnedHits): static
-    {
-        $this->pinnedHits = $pinnedHits;
-
-        return $this;
-    }
-
-    /**
-     * A list of records to unconditionally hide from search results.
-     *
-     * @param array $hiddenHits
-     *
-     * @return $this
-     */
-    public function setHiddenHits(array $hiddenHits): static
-    {
-        $this->hiddenHits = $hiddenHits;
-
-        return $this;
-    }
-
-    /**
-     * Comma separated list of fields which should be highlighted fully without snippeting.
-     *
-     * @param array $highlightFullFields
-     *
-     * @return $this
-     */
-    public function setHighlightFullFields(array $highlightFullFields): static
-    {
-        $this->highlightFullFields = $highlightFullFields;
-
-        return $this;
-    }
-
-    /**
-     * The number of tokens that should surround the highlighted text on each side.
-     *
-     * This controls the length of the snippet.
-     *
-     * @param int $highlightAffixNumTokens
-     *
-     * @return $this
-     */
-    public function setHighlightAffixNumTokens(int $highlightAffixNumTokens): static
-    {
-        $this->highlightAffixNumTokens = $highlightAffixNumTokens;
-
-        return $this;
-    }
-
-    /**
-     * Set the infix search option for the field.
-     *
-     * @param string $infix The infix search option to enable for the field.
-     *                      Possible values: "off" (disabled, default), "always" (along with regular search),
-     *                      "fallback" (if regular search produces no results).
-     * @return $this
-     */
-    public function setInfix(string $infix): static
-    {
-        $this->infix = $infix;
-
-        return $this;
-    }
-
-    /**
-     * Field values under this length will be fully highlighted, instead of showing a snippet of relevant portion.
-     *
-     * @param int $snippetThreshold
-     *
-     * @return $this
-     */
-    public function setSnippetThreshold(int $snippetThreshold): static
-    {
-        $this->snippetThreshold = $snippetThreshold;
-
-        return $this;
-    }
-
-    /**
-     * Setting this to true will make Typesense consider all variations of prefixes and typo corrections of the words
-     *
-     * in the query exhaustively, without stopping early when enough results are found.
-     *
-     * @param bool $exhaustiveSearch
-     *
-     * @return $this
-     */
-    public function exhaustiveSearch(bool $exhaustiveSearch): static
-    {
-        $this->exhaustiveSearch = $exhaustiveSearch;
-
-        return $this;
-    }
-
-    /**
-     * Enable server side caching of search query results. By default, caching is disabled.
-     *
-     * @param bool $useCache
-     *
-     * @return $this
-     */
-    public function setUseCache(bool $useCache): static
-    {
-        $this->useCache = $useCache;
-
-        return $this;
-    }
-
-    /**
-     * The duration (in seconds) that determines how long the search query is cached.
-     *
-     * @param int $cacheTtl
-     *
-     * @return $this
-     */
-    public function setCacheTtl(int $cacheTtl): static
-    {
-        $this->cacheTtl = $cacheTtl;
-
-        return $this;
-    }
-
-    /**
-     * By default, Typesense prioritizes documents whose field value matches exactly with the query.
-     *
-     * @param bool $prioritizeExactMatch
-     *
-     * @return $this
-     */
-    public function setPrioritizeExactMatch(bool $prioritizeExactMatch): static
-    {
-        $this->prioritizeExactMatch = $prioritizeExactMatch;
-
-        return $this;
-    }
-
-    /**
-     * Indicates that the last word in the query should be treated as a prefix, and not as a whole word. 
-     * 
-     * You can also control the behavior of prefix search on a per field basis.
-     * For example, if you are querying 3 fields and want to enable prefix searching only on the first field, use ?prefix=true,false,false. 
-     * The order should match the order of fields in query_by. 
-     * If a single value is specified for prefix the same value is used for all fields specified in query_by.
-     *
-     * @param string $prefix
-     *
-     * @return $this
-     */
-    public function setPrefix(string $prefix): static
-    {
-        $this->prefix = $prefix;
-
-        return $this;
-    }
-
-    /**
-     * Set a raw Typesense `vector_query` string for semantic / hybrid search.
-     *
-     * Use this for full control, e.g.
-     * "embedding:([0.1, 0.2, 0.3], k:10, distance_threshold:0.3, alpha:0.4)".
-     *
-     * For a pure vector search set the query to "*" (e.g. Model::search('*')).
-     * Providing both a text query and a vector_query performs a hybrid search.
-     *
-     * @param string $vectorQuery
-     *
-     * @return $this
-     */
-    public function vectorQuery(string $vectorQuery): static
-    {
-        $this->vectorQuery = $vectorQuery;
-
-        return $this;
-    }
-
-    /**
-     * Build a `vector_query` for nearest-neighbour / hybrid search against a
-     * vector field, without hand-writing the Typesense syntax.
-     *
-     * @param string     $field             The vector field to search against.
-     * @param array      $vector            The query embedding (array of floats).
-     * @param int        $k                 Number of nearest neighbours to return.
-     * @param float|null $distanceThreshold Optional max vector distance.
-     * @param float|null $alpha             Optional hybrid weight (0..1) between
-     *                                      keyword and vector ranking.
-     *
-     * @return $this
-     */
-    public function nearestNeighbors(string $field, array $vector, int $k = 10, ?float $distanceThreshold = null, ?float $alpha = null): static
-    {
-        $options = ['k:' . $k];
-
-        if ($distanceThreshold !== null) {
-            $options[] = 'distance_threshold:' . $distanceThreshold;
-        }
-
-        if ($alpha !== null) {
-            $options[] = 'alpha:' . $alpha;
-        }
-
-        $this->vectorQuery = sprintf('%s:([%s], %s)', $field, implode(', ', $vector), implode(', ', $options));
-
-        return $this;
-    }
-
-    /**
-     * If you have some overrides defined but want to disable all of them for a particular search query
-     *
-     * @param bool $enableOverrides
-     *
-     * @return $this
-     */
-    public function enableOverrides(bool $enableOverrides): static
-    {
-        $this->enableOverrides = $enableOverrides;
-
-        return $this;
-    }
-
-    /**
-     * Apply synonym sets to this search (server v30+), in addition to the
-     * sets linked to the collection.
-     *
-     * @param array|string $synonymSets
-     *
-     * @return $this
-     */
-    public function synonymSets(array|string $synonymSets): static
-    {
-        $this->synonymSets = (array) $synonymSets;
-
-        return $this;
-    }
-
-    /**
-     * Trigger the curation rules tagged with these tags (server v30+,
-     * formerly `override_tags`).
-     *
-     * @param array|string $curationTags
-     *
-     * @return $this
-     */
-    public function curationTags(array|string $curationTags): static
-    {
-        $this->curationTags = (array) $curationTags;
-
-        return $this;
-    }
-
-    /**
-     * Balance relevance (1) against diversity (0) for curation rules that
-     * diversify results with MMR (server v30+). Typesense defaults to 0.5.
-     *
-     * @param float $lambda
-     *
-     * @return $this
-     */
-    public function diversityLambda(float $lambda): static
-    {
-        $this->diversityLambda = $lambda;
-
-        return $this;
-    }
-
-    /**
-     * Make `found` exact up to this many candidates in group_by searches
-     * (server v30+).
-     *
-     * @param int $groupMaxCandidates
-     *
-     * @return $this
-     */
-    public function groupMaxCandidates(int $groupMaxCandidates): static
-    {
-        $this->groupMaxCandidates = $groupMaxCandidates;
-
-        return $this;
-    }
-
-    /**
-     * If you want to search multi queries in the same call
-     *
-     * @param array $optionsMulti
-     *
-     * @return $this
-     */
-    public function searchMulti(array $optionsMulti): static
-    {
-        $this->optionsMulti = $optionsMulti;
-
-        return $this;
-    }
-
-    /**
-     * Add location to order by clause.
-     *
-     * @param string $column
-     * @param float $lat
-     * @param float $lng
-     * @param string $direction
-     *
-     * @return $this
-     */
-    public function orderByLocation(string $column, float $lat, float $lng, string $direction): static
-    {
-        $this->locationOrderBy = [
-            'column' => $column,
-            'lat' => $lat,
-            'lng' => $lng,
-            'direction' => $direction,
-        ];
-
-        return $this;
     }
 
     /**

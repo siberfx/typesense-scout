@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.9] - 2026-11-10
+
+### Changed
+- Per-query search options (`groupBy`, `facetBy`, `vectorQuery`, `nearestNeighbors`,
+  `searchMulti`, highlight and cache settings, v30 options, ...) are now stored on the
+  Scout builder that they were set on, not on the shared engine. One query's options can
+  no longer leak into another search in the same process, and nothing is reset after a
+  search. The builder methods keep their names and behaviour.
+
+### Removed (breaking)
+- The per-query setter methods on `TypesenseEngine` (for example `$engine->groupBy()`,
+  `$engine->vectorQuery()`, `$engine->searchMulti()`) are removed. Set these options on the
+  builder instead: `Todo::search($q)->groupBy(...)`. Code that drove the engine directly must
+  move to the builder.
+
 ## [1.10.8] - 2026-11-10
 
 ### Fixed

@@ -5,13 +5,9 @@ parameters:
     level: 5
     tmpDir: .phpstan-cache
     ignoreErrors:
-        # Mixin closures are bound to Scout's Builder, so calling its protected engine() is intended.
+        # The closures are bound to Scout's Builder at runtime, where engine() exists.
         -
-            identifier: method.protected
-            path: src/Mixin/BuilderMixin.php
-        # The @param tags sit on methods that return closures, so PHPStan cannot match them.
-        -
-            identifier: parameter.notFound
+            identifier: method.notFound
             path: src/Mixin/BuilderMixin.php
         # The trait is used by application models, not by this package.
         -

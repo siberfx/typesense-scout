@@ -47,11 +47,9 @@ class TypesenseEngineSearchParamsTest extends TestCase
 
     public function test_boolean_false_options_are_not_stripped(): void
     {
-        $engine = $this->engine();
-        $engine->enableOverrides(false);
-        $engine->setPrioritizeExactMatch(false);
+        $builder = $this->builder('shoes')->enableOverrides(false)->setPrioritizeExactMatch(false);
 
-        $params = $this->buildFilteredParams($engine, $this->builder('shoes'));
+        $params = $this->buildFilteredParams($this->engine(), $builder);
 
         $this->assertArrayHasKey('enable_overrides', $params);
         $this->assertFalse($params['enable_overrides']);
@@ -107,27 +105,26 @@ class TypesenseEngineSearchParamsTest extends TestCase
         $this->assertSame([], $this->engine()->mapIds(['found' => 0])->all());
     }
 
-    public function test_reset_restores_per_query_defaults(): void
+    public function test_options_belong_to_their_own_builder(): void
     {
-        $engine = $this->engine();
-        $engine->groupBy(['category'])
+        $tenant = $this->builder('shoes')
+            ->groupBy(['category'])
             ->facetBy(['brand'])
             ->vectorQuery('embedding:([0.1], k:5)')
-            ->searchMulti([['collection' => 'a', 'q' => 'x']])
             ->enableOverrides(false);
 
-        $this->invokePrivate($engine, 'resetSearchParameters');
-
-        $params = $this->buildFilteredParams($engine, $this->builder('shoes'));
+        // A later, unrelated query must not inherit any of them.
+        $other = $this->builder('boots');
+        $params = $this->buildFilteredParams($this->engine(), $other);
 
         $this->assertArrayNotHasKey('group_by', $params);
         $this->assertArrayNotHasKey('facet_by', $params);
         $this->assertArrayNotHasKey('vector_query', $params);
         $this->assertTrue($params['enable_overrides']);
 
-        // The multi-search option list is cleared too, so the next search is
-        // a normal single-collection search again.
-        $ref = (new ReflectionClass(TypesenseEngine::class))->getProperty('optionsMulti');
-        $this->assertSame([], $ref->getValue($engine));
+        // And the first query keeps its own options.
+        $tenantParams = $this->buildFilteredParams($this->engine(), $tenant);
+        $this->assertSame('category', $tenantParams['group_by']);
+        $this->assertFalse($tenantParams['enable_overrides']);
     }
 }

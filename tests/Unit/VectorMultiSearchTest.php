@@ -78,9 +78,9 @@ class VectorMultiSearchTest extends TestCase
             ->willReturn(['results' => [['found' => 1, 'hits' => [['document' => ['id' => '7']]]]]]);
 
         $engine = new TypesenseEngine($typesense);
-        $engine->nearestNeighbors('embedding', [0.1, 0.2]);
+        $builder = $this->builder('*')->nearestNeighbors('embedding', [0.1, 0.2]);
 
-        $result = $engine->search($this->builder('*'));
+        $result = $engine->search($builder);
 
         $this->assertSame(1, $result['found']);
         $this->assertSame(['7'], $engine->mapIds($result)->all());
@@ -93,13 +93,12 @@ class VectorMultiSearchTest extends TestCase
             'results' => [['code' => 400, 'error' => 'Field `embedding` not found.']],
         ]);
 
-        $engine = new TypesenseEngine($typesense);
-        $engine->vectorQuery('embedding:([0.1], k:3)');
+        $builder = $this->builder('*')->vectorQuery('embedding:([0.1], k:3)');
 
         $this->expectException(RequestMalformed::class);
         $this->expectExceptionMessage('Field `embedding` not found.');
 
-        $engine->search($this->builder('*'));
+        (new TypesenseEngine($typesense))->search($builder);
     }
 
     public function test_common_vector_query_moves_into_each_multi_search_body(): void
@@ -116,13 +115,13 @@ class VectorMultiSearchTest extends TestCase
             )
             ->willReturn(['results' => []]);
 
-        $engine = new TypesenseEngine($typesense);
-        $engine->vectorQuery('embedding:([0.1], k:3)');
-        $engine->searchMulti([
-            ['collection' => 'a'],
-            ['collection' => 'b', 'vector_query' => 'own:([0.9], k:1)'],
-        ]);
+        $builder = $this->builder('*')
+            ->vectorQuery('embedding:([0.1], k:3)')
+            ->searchMulti([
+                ['collection' => 'a'],
+                ['collection' => 'b', 'vector_query' => 'own:([0.9], k:1)'],
+            ]);
 
-        $engine->search($this->builder('*'));
+        (new TypesenseEngine($typesense))->search($builder);
     }
 }

@@ -120,11 +120,10 @@ class SemanticSearchTest extends TestCase
 
     public function test_hybrid_search_with_native_embeddings_extends_per_field_lists(): void
     {
-        $engine = $this->engine(self::NATIVE);
-        $engine->setPrefix('true,false');
-        $engine->setInfix('always,off');
+        $builder = $this->builder('red shoes', ['name', 'sku'])->hybrid();
+        $builder->setPrefix('true,false')->setInfix('always,off');
 
-        $params = $this->params($engine, $this->builder('red shoes', ['name', 'sku'])->hybrid());
+        $params = $this->params($this->engine(self::NATIVE), $builder);
 
         $this->assertSame('name,sku,embedding', $params['query_by']);
         $this->assertSame('true,false,false', $params['prefix']);
@@ -133,10 +132,9 @@ class SemanticSearchTest extends TestCase
 
     public function test_existing_exclude_fields_are_kept(): void
     {
-        $engine = $this->engine(self::NATIVE);
-        $engine->setExcludeFields(['secret']);
+        $builder = $this->builder('red shoes')->semantic()->setExcludeFields(['secret']);
 
-        $params = $this->params($engine, $this->builder('red shoes')->semantic());
+        $params = $this->params($this->engine(self::NATIVE), $builder);
 
         $this->assertSame('secret,embedding', $params['exclude_fields']);
     }
@@ -151,13 +149,12 @@ class SemanticSearchTest extends TestCase
 
     public function test_semantic_search_cannot_be_combined_with_a_manual_vector_query(): void
     {
-        $engine = $this->engine(self::NATIVE);
-        $engine->nearestNeighbors('embedding', [0.1]);
+        $builder = $this->builder('red shoes')->semantic()->nearestNeighbors('embedding', [0.1]);
 
         $this->expectException(ScoutException::class);
         $this->expectExceptionMessage('cannot be combined with vectorQuery() or nearestNeighbors()');
 
-        $this->params($engine, $this->builder('red shoes')->semantic());
+        $this->params($this->engine(self::NATIVE), $builder);
     }
 
     public function test_semantic_search_requires_embedding_settings(): void

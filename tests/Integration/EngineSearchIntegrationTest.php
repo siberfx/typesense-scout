@@ -80,9 +80,9 @@ class EngineSearchIntegrationTest extends IntegrationTestCase
         $model = $this->seedVectors();
 
         $engine = new TypesenseEngine($this->typesense);
-        $engine->nearestNeighbors('embedding', $this->vector(0.98), k: 2);
+        $builder = (new Builder($model, '*'))->nearestNeighbors('embedding', $this->vector(0.98), k: 2);
 
-        $results = $engine->search(new Builder($model, '*'));
+        $results = $engine->search($builder);
 
         $this->assertSame(2, $results['found']);
         $this->assertSame(['1', '2'], $engine->mapIds($results)->all());
