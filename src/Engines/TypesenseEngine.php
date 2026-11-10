@@ -226,7 +226,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
                 // Trashed models must not be (re-)indexed when soft-deleted
                 // records are excluded from the index; decide per model, not
                 // from the first model of the batch.
-                $models = $models->filter(static fn ($model) => is_null($model->deleted_at))->values();
+                $models = $models->filter(static fn ($model) => is_null($model->getAttribute('deleted_at')))->values();
             }
         }
 
@@ -1276,7 +1276,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * You can aggregate search results into groups or buckets by specify one or more group_by fields. Separate multiple fields with a comma.
      *
-     * @param mixed $groupBy
+     * @param array $groupBy
      *
      * @return $this
      */
@@ -1348,7 +1348,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * A list of fields that will be used for faceting your results on. Separate multiple fields with a comma.
      *
-     * @param mixed $facetBy
+     * @param array $facetBy
      *
      * @return $this
      */
@@ -1393,7 +1393,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * Comma-separated list of fields from the document to include in the search result.
      *
-     * @param mixed $includeFields
+     * @param array $includeFields
      *
      * @return $this
      */
@@ -1407,7 +1407,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * Comma-separated list of fields from the document to exclude in the search result.
      *
-     * @param mixed $excludeFields
+     * @param array $excludeFields
      *
      * @return $this
      */
@@ -1423,7 +1423,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      *
      * You can use this parameter to highlight fields that you don't query for, as well.
      *
-     * @param mixed $highlightFields
+     * @param array $highlightFields
      *
      * @return $this
      */
@@ -1437,7 +1437,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * A list of records to unconditionally include in the search results at specific positions.
      *
-     * @param mixed $pinnedHits
+     * @param array $pinnedHits
      *
      * @return $this
      */
@@ -1451,7 +1451,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * A list of records to unconditionally hide from search results.
      *
-     * @param mixed $hiddenHits
+     * @param array $hiddenHits
      *
      * @return $this
      */
@@ -1465,7 +1465,7 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     /**
      * Comma separated list of fields which should be highlighted fully without snippeting.
      *
-     * @param mixed $highlightFullFields
+     * @param array $highlightFullFields
      *
      * @return $this
      */

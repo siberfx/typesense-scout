@@ -905,7 +905,9 @@ $c->analyticsV1()->rules()->retrieve();
 
 ```bash
 composer install
-vendor/bin/phpunit
+composer test      # unit tests
+composer analyse   # PHPStan static analysis of src/
+vendor/bin/phpunit # everything, including integration tests when a server is reachable
 ```
 
 The suite has two groups:

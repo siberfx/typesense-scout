@@ -55,7 +55,8 @@
     "require-dev": {
         "phpunit/phpunit": "^12.0|^13.4",
         "vlucas/phpdotenv": "^5.7",
-        "php-http/guzzle7-adapter": "^1.1"
+        "php-http/guzzle7-adapter": "^1.1",
+        "phpstan/phpstan": "2.1"
     },
     "config": {
         "platform": {
@@ -64,6 +65,10 @@
         "allow-plugins": {
             "php-http/discovery": true
         }
+    },
+    "scripts": {
+        "test": "phpunit --testsuite Unit",
+        "analyse": "phpstan analyse --memory-limit=1G"
     },
     "suggest": {
         "laravel/ai": "Required to generate embeddings for semantic() / hybrid() searches (embedding driver laravel-ai)."

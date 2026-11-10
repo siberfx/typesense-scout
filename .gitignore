@@ -4,7 +4,7 @@
 vendor
 .phpunit.result.cache
 .phpunit.cache
-
+.phpstan-cache/*
 # Local tooling / internal planning notes — never published
 /docs
 /.superpowers

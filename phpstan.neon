@@ -1,0 +1,31 @@
+# Static analysis for the package source. Run with `composer analyse`.
+parameters:
+    paths:
+        - src
+    level: 5
+    tmpDir: .phpstan-cache
+    ignoreErrors:
+        # Mixin closures are bound to Scout's Builder, so calling its protected engine() is intended.
+        -
+            identifier: method.protected
+            path: src/Mixin/BuilderMixin.php
+        # The @param tags sit on methods that return closures, so PHPStan cannot match them.
+        -
+            identifier: parameter.notFound
+            path: src/Mixin/BuilderMixin.php
+        # The trait is used by application models, not by this package.
+        -
+            identifier: trait.unused
+            path: src/Concerns/HasScopedApiKey.php
+        # config() is a Laravel helper; the package is analysed without the framework booted.
+        -
+            identifier: function.notFound
+            path: src/Engines/TypesenseEngine.php
+        # Scout adds these methods to models through the Searchable trait, which the Model type does not show.
+        -
+            identifier: method.notFound
+            path: src/Engines/TypesenseEngine.php
+        # The callbacks return the Scout-added toSearchableArray() result, which PHPStan cannot type.
+        -
+            identifier: argument.unresolvableType
+            path: src/Engines/TypesenseEngine.php

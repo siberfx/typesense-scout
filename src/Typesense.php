@@ -192,7 +192,7 @@ class Typesense
     public function deleteDocument(Collection $collectionIndex, $modelId): array
     {
         /**
-         * @var $document Document
+         * @var Document $document
          */
         $document = $collectionIndex->getDocuments()[(string) $modelId];
 

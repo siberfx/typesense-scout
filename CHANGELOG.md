@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.5] - 2026-11-10
+
+### Added
+- PHPStan (level 5) over `src/`, run with `composer analyse` and in a new CI job.
+- `composer test` runs the unit suite.
+
+### Fixed
+- Docblocks of the batch-search setters (`groupBy`, `facetBy`, `includeFields`,
+  `excludeFields`, `highlightFields`, `pinnedHits`, `hiddenHits`, `highlightFullFields`)
+  declared `mixed` where the parameter is an `array`. The `@var` on the document
+  upsert in `Typesense.php` was malformed.
+
 ## [1.10.4] - 2026-11-10
 
 ### Changed
