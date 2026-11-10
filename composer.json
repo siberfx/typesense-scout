@@ -55,12 +55,12 @@
         "illuminate/pagination": "^12.69|^13.30",
         "illuminate/queue": "^12.69|^13.30",
         "illuminate/support": "^12.69|^13.30",
-        "typesense/typesense-php": "^6.0"
+        "typesense/typesense-php": "^6.0",
+        "php-http/guzzle7-adapter": "^1.1"
     },
     "require-dev": {
         "phpunit/phpunit": "^12.0|^13.4",
         "vlucas/phpdotenv": "^5.7",
-        "php-http/guzzle7-adapter": "^1.1",
         "phpstan/phpstan": "2.1"
     },
     "config": {

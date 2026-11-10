@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.7] - 2026-11-10
+
+### Fixed
+- `php-http/guzzle7-adapter` is a runtime requirement, not a dev one. The Typesense SDK
+  needs a PSR-18 client to send any request, so apps that installed only this package
+  failed on their first search. The README no longer asks for a separate install step.
+
 ## [1.10.6] - 2026-11-10
 
 ### Changed

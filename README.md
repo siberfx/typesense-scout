@@ -41,14 +41,8 @@ admin API wrappers — and a standalone `TypesenseDirect` client for talking to 
 ## Installation
 The Typesense PHP SDK uses httplug to interface with various PHP HTTP libraries through a single API.
 
-First, install the httplug adapter that matches your `guzzlehttp/guzzle` version. Laravel 12 and 13 ship
-with Guzzle 7, so run:
-
-```bash
-composer require php-http/guzzle7-adapter
-```
-
-Then install the driver:
+The package requires the Guzzle 7 HTTP adapter (`php-http/guzzle7-adapter`), which Laravel 12 and 13
+already ship Guzzle for, so Composer installs it with the driver. Install the driver:
 
 ```bash
 composer require siberfx/typesense-scout
