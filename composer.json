@@ -10,6 +10,10 @@
     ],
     "type": "library",
     "homepage": "https://github.com/siberfx/typesense-scout",
+    "support": {
+        "issues": "https://github.com/siberfx/typesense-scout/issues",
+        "source": "https://github.com/siberfx/typesense-scout"
+    },
     "license": "MIT",
     "authors": [
         {
@@ -20,6 +24,7 @@
         }
     ],
     "minimum-stability": "stable",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Siberfx\\Typesense\\": "src/"

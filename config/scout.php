@@ -144,7 +144,7 @@ return [
         // Client settings consumed by the Typesense PHP client. The service
         // provider reads `scout.typesense.client-settings` to build the client.
         'client-settings' => [
-            'api_key'         => env('TYPESENSE_API_KEY', 'xyz'),
+            'api_key'         => env('TYPESENSE_API_KEY'),
             'nodes'           => [
                 [
                     'host'     => env('TYPESENSE_HOST', 'localhost'),

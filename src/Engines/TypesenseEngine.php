@@ -1192,8 +1192,8 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
         $objectIdPositions = array_flip($objectIds);
 
         return $model->getScoutModelsByIds($builder, $objectIds)
-            ->filter(static function ($model) use ($objectIds) {
-                return in_array($model->getScoutKey(), $objectIds, false);
+            ->filter(static function ($model) use ($objectIdPositions) {
+                return isset($objectIdPositions[$model->getScoutKey()]);
             })
             ->sortBy(static function ($model) use ($objectIdPositions) {
                 return $objectIdPositions[$model->getScoutKey()];
@@ -1251,8 +1251,8 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
 
         return $model->queryScoutModelsByIds($builder, $objectIds)
             ->cursor()
-            ->filter(static function ($model) use ($objectIds) {
-                return in_array($model->getScoutKey(), $objectIds, false);
+            ->filter(static function ($model) use ($objectIdPositions) {
+                return isset($objectIdPositions[$model->getScoutKey()]);
             })
             ->sortBy(static function ($model) use ($objectIdPositions) {
                 return $objectIdPositions[$model->getScoutKey()];

@@ -39,6 +39,19 @@ class ScoutConfigTest extends TestCase
         );
     }
 
+    public function test_the_template_does_not_default_the_api_key_to_a_placeholder(): void
+    {
+        // A placeholder key would be sent to the server and fail with a 401 later.
+        // Reading the source keeps the test independent of TYPESENSE_API_KEY in the environment.
+        $source = file_get_contents(__DIR__ . '/../../config/scout.php');
+
+        $this->assertStringNotContainsString(
+            "'xyz'",
+            $source,
+            'The API key must come from TYPESENSE_API_KEY without a placeholder default.'
+        );
+    }
+
     public function test_client_settings_contain_connection_details(): void
     {
         $clientSettings = $this->config()['typesense']['client-settings'];

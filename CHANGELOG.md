@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.6] - 2026-11-10
+
+### Changed
+- `map()` and `lazyMap()` check each record against the hits with a key lookup, not
+  `in_array()` inside a loop. Results and their order are unchanged.
+- The published `config/scout.php` reads `TYPESENSE_API_KEY` with no default. Before, a
+  missing variable sent the placeholder `xyz`, which the server rejects with a 401. Now
+  the client fails at creation with a configuration error. Apps that relied on the
+  placeholder must set `TYPESENSE_API_KEY`.
+- `composer.json` sets `prefer-stable` and adds `support` links (issues and source).
+
+### Fixed
+- The 1.9.0 entry said the lock file ships with the package. It does not: `composer.lock`
+  is git-ignored, so consumers resolve their own dependencies.
+
 ## [1.10.5] - 2026-11-10
 
 ### Added
