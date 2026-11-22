@@ -8,7 +8,8 @@ use Siberfx\Typesense\Engines\TypesenseEngine;
 uses(IntegrationServer::class);
 
 /**
- * Scout engine index maintenance against a real server: removing models.
+ * Scout engine index maintenance against a real server: removing models and
+ * flushing collections.
  */
 
 trait EngineLifecycleIntegrationTestHelpers
@@ -107,4 +108,22 @@ test('delete handles more ids than one batch', function () {
     (new TypesenseEngine($this->typesense))->delete(new EloquentCollection($models));
 
     expect($this->indexedIds())->toBe([(string) (TypesenseEngine::DELETE_BATCH_SIZE + 20)]);
+});
+
+test('flush drops the collection', function () {
+    $this->seed(['1']);
+
+    (new TypesenseEngine($this->typesense))->flush($this->model());
+
+    expect(fn () => $this->client->getCollections()[self::COLLECTION]->retrieve())
+        ->toThrow(\Typesense\Exceptions\ObjectNotFound::class);
+});
+
+test('flush of a missing collection does not create it', function () {
+    $this->dropCollection(self::COLLECTION);
+
+    (new TypesenseEngine($this->typesense))->flush($this->model());
+
+    expect(fn () => $this->client->getCollections()[self::COLLECTION]->retrieve())
+        ->toThrow(\Typesense\Exceptions\ObjectNotFound::class);
 });

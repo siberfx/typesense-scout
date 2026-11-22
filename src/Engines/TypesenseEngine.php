@@ -659,6 +659,9 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     }
 
     /**
+     * Drop the model's collection. A collection that does not exist counts as
+     * already flushed: it is not created first just to be deleted.
+     *
      * @param \Illuminate\Database\Eloquent\Model $model
      *
      * @throws \Http\Client\Exception
@@ -666,9 +669,13 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     public function flush($model): void
     {
-        $collection = $this->typesense->getCollectionIndex($model);
-        $collection->delete();
-        $this->typesense->forgetCollection($model->searchableAs());
+        $name = $model->searchableAs();
+
+        try {
+            $this->typesense->deleteCollection($name);
+        } catch (ObjectNotFound) {
+            $this->typesense->forgetCollection($name);
+        }
     }
 
     /**
