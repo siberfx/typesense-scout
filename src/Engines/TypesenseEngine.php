@@ -16,7 +16,6 @@ use Laravel\Scout\Builder;
 use Laravel\Scout\Contracts\SupportsSemanticSearch;
 use Laravel\Scout\Engines\Engine;
 use Laravel\Scout\Exceptions\ScoutException;
-use Illuminate\Support\Facades\Config;
 use Typesense\Exceptions\ObjectAlreadyExists;
 use Typesense\Exceptions\ObjectNotFound;
 use Typesense\Exceptions\ObjectUnprocessable;
