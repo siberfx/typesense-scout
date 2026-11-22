@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-22
+
+### Changed
+- Removing models from the index (`unsearchable()`, deleting a searchable model) deletes
+  their documents by an `id:[...]` filter, at most 100 ids per request
+  (`TypesenseEngine::DELETE_BATCH_SIZE`), instead of sending one request per model. Ids are
+  backtick-quoted, so ids that hold commas or filter syntax are matched literally. Ids
+  that are not indexed are still ignored.
+- The `count()` builder method searches with `per_page` 0, so it reads only the total
+  and fetches no hits. The builder's own limit is unchanged afterwards.
+- The Scout engine uses the `Typesense` singleton from the container, so it shares one
+  client and one collection cache with the `Typesense` facade. Before, it built its own,
+  and the facade could not clear the engine's cached collections.
+
+### Fixed
+- `flush()` (and `scout:flush`) no longer creates a missing collection only to delete it.
+  It deletes the collection directly and treats a missing collection as already flushed.
+
 ## [1.10.11] - 2026-11-10
 
 ### Changed
@@ -393,7 +411,8 @@ server-side bug fix releases with no API changes.
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
 
-[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.9.0...HEAD
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.11.0...HEAD
+[1.11.0]: https://github.com/siberfx/typesense-scout/compare/1.10.11...1.11.0
 [1.9.0]: https://github.com/siberfx/typesense-scout/compare/1.8.0...1.9.0
 [1.8.0]: https://github.com/siberfx/typesense-scout/compare/1.7.2...1.8.0
 [1.7.2]: https://github.com/siberfx/typesense-scout/compare/1.7.1...1.7.2
