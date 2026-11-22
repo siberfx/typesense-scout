@@ -35,6 +35,11 @@ use Typesense\Exceptions\TypesenseClientError;
 class TypesenseEngine extends Engine implements SupportsSemanticSearch
 {
     /**
+     * Maximum number of document ids sent in one delete-by-filter request.
+     */
+    public const DELETE_BATCH_SIZE = 100;
+
+    /**
      * @var Typesense
      */
     private Typesense $typesense;
@@ -216,6 +221,12 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
     }
 
     /**
+     * Remove the models' documents from the index.
+     *
+     * Documents are deleted by an `id` filter, in batches of
+     * DELETE_BATCH_SIZE ids, so removing many models takes a few requests
+     * rather than one per model. Ids that are not indexed are ignored.
+     *
      * @param \Illuminate\Database\Eloquent\Collection $models
      *
      * @throws \Http\Client\Exception
@@ -223,13 +234,32 @@ class TypesenseEngine extends Engine implements SupportsSemanticSearch
      */
     public function delete($models): void
     {
-        $models->each(function (Model $model) {
-            // TODO look into this vs $model->getKey()
-            $this->typesense->withCollection(
-                $model,
-                fn ($collectionIndex) => $this->typesense->deleteDocument($collectionIndex, $model->getScoutKey())
-            );
+        if ($models->isEmpty()) {
+            return;
+        }
+
+        // The document id is the Scout key (see TypesenseDocument), not the primary key.
+        $ids = $models->map(static fn ($model) => (string) $model->getScoutKey())
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->typesense->withCollection($models->first(), function ($collection) use ($ids) {
+            foreach (array_chunk($ids, self::DELETE_BATCH_SIZE) as $batch) {
+                $this->typesense->deleteDocuments($collection, ['filter_by' => self::idFilter($batch)]);
+            }
         });
+    }
+
+    /**
+     * Build an `id:[...]` filter. Each id is backtick-quoted, so ids holding
+     * commas, spaces or filter syntax cannot change the filter.
+     *
+     * @param array<int, string> $ids
+     */
+    private static function idFilter(array $ids): string
+    {
+        return 'id:[' . implode(',', array_map(FilterBuilder::escapeFilterValue(...), $ids)) . ']';
     }
 
     /**
