@@ -8,8 +8,8 @@ use Siberfx\Typesense\Engines\TypesenseEngine;
 uses(IntegrationServer::class);
 
 /**
- * Scout engine index maintenance against a real server: removing models and
- * flushing collections.
+ * Scout engine index maintenance against a real server: removing models,
+ * flushing collections and counting matches.
  */
 
 trait EngineLifecycleIntegrationTestHelpers
@@ -18,9 +18,14 @@ trait EngineLifecycleIntegrationTestHelpers
 
     protected function model(int|string $key = 0): object
     {
-        return new class($key, self::COLLECTION) {
-            public function __construct(private int|string $key, private string $collection)
+        return new class($key, self::COLLECTION, new TypesenseEngine($this->typesense)) {
+            public function __construct(private int|string $key, private string $collection, private TypesenseEngine $engine)
             {
+            }
+
+            public function searchableUsing(): TypesenseEngine
+            {
+                return $this->engine;
             }
 
             public function getScoutKey(): int|string
@@ -126,4 +131,13 @@ test('flush of a missing collection does not create it', function () {
 
     expect(fn () => $this->client->getCollections()[self::COLLECTION]->retrieve())
         ->toThrow(\Typesense\Exceptions\ObjectNotFound::class);
+});
+
+test('count reads the total without fetching hits', function () {
+    $this->seed(['1', '2', '3']);
+
+    $builder = new \Laravel\Scout\Builder($this->model(), '*');
+    $builder->where('id', '!=', '2');
+
+    expect($builder->count())->toBe(2);
 });

@@ -13,13 +13,23 @@ class BuilderMixin
 {
     /**
      * Total number of matches for the query.
+     *
+     * The search asks for no hits (per_page 0): only the total is read. The
+     * builder's own limit is restored afterwards.
      */
     public function count(): Closure
     {
         return function () {
-            return $this->engine()
-                        ->getTotalCount($this->engine()
-                                             ->search($this));
+            $limit = $this->limit;
+            $this->limit = 0;
+
+            try {
+                $engine = $this->engine();
+
+                return $engine->getTotalCount($engine->search($this));
+            } finally {
+                $this->limit = $limit;
+            }
         };
     }
 
