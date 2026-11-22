@@ -26,10 +26,10 @@ class TypesenseServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The engine shares the Typesense singleton (and so its client and
+        // collection cache) with the Typesense facade.
         $this->app[EngineManager::class]->extend('typesense', static function ($app) {
-            $client = new Client(Config::get('scout.typesense.client-settings'));
-
-            return new TypesenseEngine(new Typesense($client), Config::get('scout.typesense', []));
+            return new TypesenseEngine($app->make(Typesense::class), Config::get('scout.typesense', []));
         });
 
         $this->registerMacros();
