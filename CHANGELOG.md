@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-26
+
+### Added
+- `TypesenseDirect::swapAlias($alias, $collection, dropPrevious: false)` points an alias at
+  another collection and returns the collection it pointed to before (null for a new
+  alias). With `dropPrevious: true` it also deletes that previous collection, so a reindex
+  into a fresh collection can switch over without downtime. It never deletes the
+  collection the alias now points to.
+- `TypesenseDirect::aliasTarget($alias)` returns the collection an alias points to, or null
+  when the alias does not exist.
+- `TypesenseDirect::truncateCollection($name)` deletes every document but keeps the schema
+  (server v28+) and returns the number deleted.
+- `documents($c)->updateByFilter($fields, $filterBy)` partially updates every matching
+  document and returns the number updated.
+- `documents($c)->importChunked($documents, $action, $chunkSize = 100)` imports any iterable
+  (generators, lazy collections) one chunk per request, so the source never has to sit in
+  memory. Failed rows do not stop the import. It returns
+  `['imported' => int, 'failed' => int, 'errors' => [...]]`, where each error holds the
+  row's position in the source, the HTTP code and the message. At most 100 errors are
+  listed (`DocumentActions::IMPORT_ERROR_LIMIT`); `failed` counts all of them.
+- `TypesenseDirect::browserCredentials($searchKey, $parameters, $ttlSeconds = 3600)` returns a
+  scoped search key together with the host, port, protocol and path a frontend should send
+  it to, plus its `expires_at`. Pass `null` as the TTL to keep an `expires_at` you set in
+  `$parameters`.
+- A `public` block on each standalone connection (`TYPESENSE_PUBLIC_HOST`, `_PORT`,
+  `_PROTOCOL`, `_PATH`) sets the host `browserCredentials()` reports. When no public host is
+  set, it uses the connection's first node. Missing port and protocol values are taken
+  from that node. The block is not passed to the Typesense client.
+
 ## [1.11.0] - 2026-11-22
 
 ### Changed
@@ -411,7 +440,8 @@ server-side bug fix releases with no API changes.
   `^11.0|^12.0|^13.0` to `^12.0|^13.0`, and the previously invalid
   `laravel/scout` constraint (`^10.0|^11.0|^12.0|^13.0`) was corrected to `^11.0`.
 
-[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.11.0...HEAD
+[Unreleased]: https://github.com/siberfx/typesense-scout/compare/1.12.0...HEAD
+[1.12.0]: https://github.com/siberfx/typesense-scout/compare/1.11.0...1.12.0
 [1.11.0]: https://github.com/siberfx/typesense-scout/compare/1.10.11...1.11.0
 [1.9.0]: https://github.com/siberfx/typesense-scout/compare/1.8.0...1.9.0
 [1.8.0]: https://github.com/siberfx/typesense-scout/compare/1.7.2...1.8.0
