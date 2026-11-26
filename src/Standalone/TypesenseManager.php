@@ -63,9 +63,38 @@ class TypesenseManager
     {
         $name ??= $this->defaultConnection;
 
-        return $this->resolved[$name] ??= new TypesenseConnection(
-            $this->factory->make($this->resolveSettingsFor($name))
+        if (isset($this->resolved[$name])) {
+            return $this->resolved[$name];
+        }
+
+        $settings = $this->resolveSettingsFor($name);
+        $public = $settings['public'] ?? [];
+        unset($settings['public']);
+
+        return $this->resolved[$name] = new TypesenseConnection(
+            $this->factory->make($settings),
+            $this->publicNode(is_array($public) ? $public : [], $settings),
         );
+    }
+
+    /**
+     * Where browsers reach a connection: its `public` settings, with the first
+     * node filling in whatever they leave out.
+     */
+    private function publicNode(array $public, array $settings): array
+    {
+        $node = $settings['nodes'][0] ?? [];
+
+        if (empty($public['host'])) {
+            return array_intersect_key($node, array_flip(['host', 'port', 'protocol', 'path']));
+        }
+
+        return [
+            'host' => $public['host'],
+            'port' => ($public['port'] ?? null) ?: ($node['port'] ?? null),
+            'protocol' => ($public['protocol'] ?? null) ?: ($node['protocol'] ?? null),
+            'path' => $public['path'] ?? '',
+        ];
     }
 
     /**

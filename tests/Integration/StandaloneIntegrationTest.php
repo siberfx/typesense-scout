@@ -79,3 +79,56 @@ test('full document lifecycle', function () {
     $connection->dropCollection($collection);
     expect($connection->hasCollection($collection))->toBeFalse();
 });
+
+test('reindex with chunked import, filter update, truncate and alias swap', function () {
+    $connection = $this->manager()->connection();
+    $schema = fn (string $name) => [
+        'name' => $name,
+        'fields' => [
+            ['name' => 'title', 'type' => 'string'],
+            ['name' => 'year', 'type' => 'int32'],
+            ['name' => 'classic', 'type' => 'bool', 'optional' => true],
+        ],
+    ];
+
+    foreach (['standalone_reindex_v1', 'standalone_reindex_v2'] as $name) {
+        $this->dropCollection($name);
+    }
+    try {
+        $connection->aliases()['standalone_reindex']->delete();
+    } catch (\Throwable) {
+        // Alias did not exist.
+    }
+
+    $connection->createCollection($schema('standalone_reindex_v1'));
+    expect($connection->swapAlias('standalone_reindex', 'standalone_reindex_v1'))->toBeNull();
+    expect($connection->aliasTarget('standalone_reindex'))->toBe('standalone_reindex_v1');
+
+    // Chunked import from a generator, with one bad row.
+    $connection->createCollection($schema('standalone_reindex_v2'));
+    $docs = (function () {
+        yield ['id' => '1', 'title' => 'Dune', 'year' => 1965];
+        yield ['id' => '2', 'title' => 'Neuromancer', 'year' => 1984];
+        yield ['id' => '3', 'title' => 'Foundation', 'year' => 'not a year'];
+    })();
+    $result = $connection->documents('standalone_reindex_v2')->importChunked($docs, 'upsert', 2);
+    expect($result['imported'])->toBe(2);
+    expect($result['failed'])->toBe(1);
+    expect($result['errors'][0]['row'])->toBe(2);
+
+    // Update by filter.
+    expect($connection->documents('standalone_reindex_v2')->updateByFilter(['classic' => true], 'year:<1970'))->toBe(1);
+
+    // Swap and drop the old collection.
+    expect($connection->swapAlias('standalone_reindex', 'standalone_reindex_v2', dropPrevious: true))->toBe('standalone_reindex_v1');
+    expect($connection->hasCollection('standalone_reindex_v1'))->toBeFalse();
+    $hits = $connection->search('standalone_reindex', ['q' => '*', 'query_by' => 'title', 'filter_by' => 'classic:true']);
+    expect($hits['found'])->toBe(1);
+
+    // Truncate keeps the schema.
+    expect($connection->truncateCollection('standalone_reindex_v2'))->toBe(2);
+    expect($connection->hasCollection('standalone_reindex_v2'))->toBeTrue();
+
+    $connection->aliases()['standalone_reindex']->delete();
+    $connection->dropCollection('standalone_reindex_v2');
+});

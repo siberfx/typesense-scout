@@ -39,6 +39,15 @@ return [
                 ],
             ], static fn (array $node): bool => ! empty($node['host']))),
             'nearest_node' => null,
+            // Where browsers reach this cluster with a scoped key (often a CDN or
+            // proxy host). Used by browserCredentials(); an empty host falls back
+            // to the first node above.
+            'public' => [
+                'host'     => env('TYPESENSE_PUBLIC_HOST'),
+                'port'     => env('TYPESENSE_PUBLIC_PORT'),
+                'path'     => env('TYPESENSE_PUBLIC_PATH', ''),
+                'protocol' => env('TYPESENSE_PUBLIC_PROTOCOL'),
+            ],
             // Left null by default so an unset env genuinely inherits the value
             // from scout.typesense.client-settings; set the env var to override.
             'connection_timeout_seconds'   => env('TYPESENSE_CONNECTION_TIMEOUT_SECONDS'),

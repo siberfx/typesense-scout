@@ -649,6 +649,14 @@ return [
             'api_key'      => env('TYPESENSE_API_KEY'),
             'nodes'        => [ /* host/port/protocol … */ ],
             'nearest_node' => null,
+            // Where browsers reach this cluster (see browserCredentials()).
+            // An empty host falls back to the first node.
+            'public'       => [
+                'host'     => env('TYPESENSE_PUBLIC_HOST'),
+                'port'     => env('TYPESENSE_PUBLIC_PORT'),
+                'path'     => env('TYPESENSE_PUBLIC_PATH', ''),
+                'protocol' => env('TYPESENSE_PUBLIC_PROTOCOL'),
+            ],
             // timeouts/retries default to null -> inherit scout settings
         ],
 
@@ -717,7 +725,28 @@ $connection->alterCollection('books', [
 // Clone a collection's schema (server v30+: optionally with its documents)
 $connection->cloneCollection('books', 'books_v2', copyDocuments: true);
 
+// Empty the collection but keep its schema (server v28+); returns the count
+$connection->truncateCollection('books');
+
 $connection->dropCollection('books');             // delete the collection
+```
+
+### Reindexing without downtime
+
+Point your app at an **alias**, build a fresh collection next to the live one,
+then swap the alias over. Searches never see a half-filled collection:
+
+```php
+$connection = TypesenseDirect::connection();
+
+$connection->aliasTarget('books');                // 'books_v1', or null if no alias
+
+$connection->createCollection(['name' => 'books_v2', 'fields' => [/* … */]]);
+$connection->documents('books_v2')->importChunked($source());
+
+// Returns the collection the alias pointed to before ('books_v1').
+// dropPrevious: true deletes that collection once the alias has moved.
+$connection->swapAlias('books', 'books_v2', dropPrevious: true);
 ```
 
 ### Documents
@@ -739,6 +768,16 @@ $results = $docs->import([
     ['id' => '1', 'title' => 'Dune',        'year' => 1965],
     ['id' => '2', 'title' => 'Neuromancer', 'year' => 1984],
 ], 'upsert');
+
+// Large or lazy sources (generators, LazyCollection, cursors): import in
+// chunks so the whole set never sits in memory. Failed rows don't stop it.
+$result = $docs->importChunked($generator, 'upsert', chunkSize: 500);
+// ['imported' => 48210, 'failed' => 1,
+//  'errors' => [['row' => 912, 'code' => 400, 'error' => 'Field `year` must be an int32.']]]
+// `row` is the document's position in the source. Up to 100 errors are listed.
+
+// Update many by filter (partial update); returns the number updated
+$docs->updateByFilter(['in_stock' => false], 'year:<1950');
 
 // Delete many by filter
 $docs->deleteByFilter(['filter_by' => 'year:<1950']);
@@ -792,6 +831,24 @@ $scoped = TypesenseDirect::generateScopedSearchKey($parentSearchKey, [
     'expires_at' => now()->addDay()->timestamp,
 ]);
 ```
+
+To let a frontend search Typesense directly, `browserCredentials()` returns the
+scoped key together with the host to send it to, ready to return as JSON. The
+host comes from the connection's `public` settings (`TYPESENSE_PUBLIC_*`, often a
+CDN or proxy host), falling back to the first node:
+
+```php
+// In a controller. The key expires after the TTL (seconds; null = no expiry
+// beyond any expires_at you pass) and the filter is sealed into it.
+return TypesenseDirect::browserCredentials($parentSearchKey, [
+    'filter_by' => "tenant_id:{$user->tenant_id}",
+], ttlSeconds: 3600);
+// ['key' => '…', 'host' => 'search.example.com', 'port' => 443,
+//  'protocol' => 'https', 'path' => '', 'expires_at' => 1795000000]
+```
+
+> [!IMPORTANT]
+> The parent key must allow only `documents:search`. Never use the admin key.
 
 ### Admin resources
 
@@ -847,11 +904,12 @@ $client->getCollections()['books']->getSynonyms()->upsert('coat-synonyms', [
 
 | Area | Methods on `TypesenseDirect::connection()` |
 |------|--------------------------------------------|
-| Collections | `createCollection`, `cloneCollection`, `ensureCollection`, `hasCollection`, `retrieveCollection`, `alterCollection`, `dropCollection`, `listCollections` |
-| Documents (`documents($c)->`) | `create`, `upsert`, `update`, `retrieve`, `delete`, `deleteByFilter`, `import`, `export` |
+| Collections | `createCollection`, `cloneCollection`, `ensureCollection`, `hasCollection`, `retrieveCollection`, `alterCollection`, `truncateCollection`, `dropCollection`, `listCollections` |
+| Documents (`documents($c)->`) | `create`, `upsert`, `update`, `updateByFilter`, `retrieve`, `delete`, `deleteByFilter`, `import`, `importChunked`, `export` |
 | Search | `search`, `multiSearch`, `unionSearch` |
-| Keys | `keys`, `generateScopedSearchKey` |
-| Admin | `aliases`, `presets`, `stopwords`, `stemming`, `analytics`, `analyticsV1`, `synonymSets`, `curationSets`, `conversations`, `nlSearchModels` |
+| Keys | `keys`, `generateScopedSearchKey`, `browserCredentials` |
+| Aliases | `aliases`, `aliasTarget`, `swapAlias` |
+| Admin | `presets`, `stopwords`, `stemming`, `analytics`, `analyticsV1`, `synonymSets`, `curationSets`, `conversations`, `nlSearchModels` |
 | Ops | `health`, `metrics`, `debug`, `operations` |
 | Escape hatch | `client()` |
 

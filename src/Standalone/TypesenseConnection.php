@@ -26,8 +26,16 @@ use Typesense\SynonymSets;
  */
 class TypesenseConnection
 {
-    public function __construct(private readonly Client $client)
-    {
+    /**
+     * @param array $publicNode Where browsers reach this cluster with a scoped key:
+     *                          ['host' => ..., 'port' => ..., 'protocol' => ..., 'path' => ...].
+     *                          The manager fills it from the connection's `public`
+     *                          settings, falling back to the first node.
+     */
+    public function __construct(
+        private readonly Client $client,
+        private readonly array $publicNode = [],
+    ) {
     }
 
     /** Raw client escape hatch. */
@@ -102,6 +110,18 @@ class TypesenseConnection
         return $this->client->getCollections()->retrieve();
     }
 
+    /**
+     * Delete every document in the collection but keep its schema (server v28+).
+     *
+     * @return int The number of deleted documents.
+     */
+    public function truncateCollection(string $name): int
+    {
+        $result = $this->client->getCollections()[$name]->getDocuments()->delete(['truncate' => 'true']);
+
+        return (int) ($result['num_deleted'] ?? 0);
+    }
+
     // ---- Documents -----------------------------------------------------
 
     public function documents(string $collection): DocumentActions
@@ -152,9 +172,68 @@ class TypesenseConnection
         return $this->client->getKeys()->generateScopedSearchKey($searchKey, $parameters);
     }
 
+    /**
+     * Browser credentials for searching straight from the frontend: a scoped key
+     * plus the public host to send it to, as one array ready to hand to a SPA.
+     *
+     * @param string   $searchKey  Parent key; it must allow only `documents:search`.
+     * @param array    $parameters Embedded search parameters, e.g. ['filter_by' => 'tenant:7'].
+     * @param int|null $ttlSeconds Seconds until the key expires. Null leaves
+     *                             `expires_at` as given in $parameters (if at all).
+     * @return array{key: string, host: string|null, port: int|null, protocol: string|null, path: string, expires_at: int|null}
+     */
+    public function browserCredentials(string $searchKey, array $parameters = [], ?int $ttlSeconds = 3600): array
+    {
+        if ($ttlSeconds !== null) {
+            $parameters['expires_at'] = time() + $ttlSeconds;
+        }
+
+        $port = $this->publicNode['port'] ?? null;
+
+        return [
+            'key' => $this->generateScopedSearchKey($searchKey, $parameters),
+            'host' => $this->publicNode['host'] ?? null,
+            'port' => $port === null || $port === '' ? null : (int) $port,
+            'protocol' => $this->publicNode['protocol'] ?? null,
+            'path' => (string) ($this->publicNode['path'] ?? ''),
+            'expires_at' => isset($parameters['expires_at']) ? (int) $parameters['expires_at'] : null,
+        ];
+    }
+
     public function aliases(): Aliases
     {
         return $this->client->getAliases();
+    }
+
+    /** The collection an alias points to, or null when the alias does not exist. */
+    public function aliasTarget(string $alias): ?string
+    {
+        try {
+            return $this->client->getAliases()[$alias]->retrieve()['collection_name'] ?? null;
+        } catch (ObjectNotFound) {
+            return null;
+        }
+    }
+
+    /**
+     * Point an alias at another collection, e.g. after reindexing into a fresh
+     * collection, so searches switch over without downtime.
+     *
+     * @param bool $dropPrevious Delete the collection the alias pointed to before.
+     * @return string|null The collection the alias pointed to before, or null
+     *                     when the alias is new.
+     */
+    public function swapAlias(string $alias, string $collection, bool $dropPrevious = false): ?string
+    {
+        $previous = $this->aliasTarget($alias);
+
+        $this->client->getAliases()->upsert($alias, ['collection_name' => $collection]);
+
+        if ($dropPrevious && $previous !== null && $previous !== $collection) {
+            $this->dropCollection($previous);
+        }
+
+        return $previous;
     }
 
     public function presets(): Presets
